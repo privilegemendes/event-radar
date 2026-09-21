@@ -21,9 +21,10 @@ export async function GET() {
       db.event.count({ where: { ...visible, status: "DISCOVERED" } }),
       // Podium badge: accepted speaking gigs plus anything marked as attending.
       db.event.count({ where: { ...visible, OR: [{ status: "ACCEPTED" }, { attending: true }] } }),
-      // Coder Events badge: EMEA events from Coder's own schedule.
+      // Coder Events badge: EMEA events from Coder's own schedule. Macro regions,
+      // matching EMEA_REGIONS on the Coder Events page and what deriveGeo() writes.
       db.event.count({
-        where: { ...visible, isCoderEvent: true, region: { in: ["Amsterdam/NL", "Rest of Europe"] } },
+        where: { ...visible, isCoderEvent: true, region: { in: ["Europe", "UK"] } },
       }),
     ]);
 

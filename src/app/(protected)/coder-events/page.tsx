@@ -20,7 +20,9 @@ interface CoderEvent {
   isCoderEvent: boolean;
 }
 
-const EMEA_REGIONS = new Set(["Amsterdam/NL", "Rest of Europe", "London/UK"]);
+// Macro regions, matching REGIONS in lib/constants.ts and what deriveGeo()
+// writes to Event.region. The specific place lives in Event.city.
+const EMEA_REGIONS = new Set(["Europe", "UK"]);
 
 function fmtDate(d: string | null, opts?: Intl.DateTimeFormatOptions) {
   if (!d) return null;
@@ -113,7 +115,7 @@ export default function CoderEventsPage() {
           <div className="flex items-center gap-2">
             <div className="w-0.5 h-6 bg-[#BC7CFF] rounded-full flex-shrink-0" />
             <span className="font-mono text-[9px] text-white/50">
-              Purple border = EMEA event (Amsterdam/NL, Rest of Europe, or London/UK) — you can realistically join or speak
+              Purple border = EMEA event (Europe or UK) — you can realistically join or speak
             </span>
           </div>
         </div>

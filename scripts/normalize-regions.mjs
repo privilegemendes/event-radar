@@ -1,6 +1,32 @@
+/**
+ * SUPERSEDED — DO NOT RUN. Kept for reference only.
+ *
+ * This predates the split of location into two columns. Event.region now holds a
+ * MACRO region (the REGIONS list in src/lib/constants.ts: North America, UK,
+ * Europe, Middle East, Africa, Asia Pacific, Online, Other) and Event.city holds
+ * the specific place. Both are produced by deriveGeo() in src/lib/events.ts,
+ * which is the current implementation; scripts/backfill-geo.mjs is its backfill.
+ *
+ * The canonicalRegion() below writes the OLD single-field vocabulary
+ * ("Amsterdam/NL", "Rest of Europe", "London/UK", "Austin", "Bay Area"). Running
+ * it rolls the data backwards: measured against live data it rewrites 979 of 1233
+ * rows, breaks the region filters on the dashboard, map, inbox and partners pages
+ * (which all read the macro list), and collapses every Asia Pacific, Middle East
+ * and Africa event into "Other", losing that geography entirely.
+ *
+ * APPLY=1 is therefore blocked. Override only if you have a database backup and
+ * genuinely intend the rollback.
+ */
 import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 const APPLY = process.env.APPLY === "1";
+
+if (APPLY && process.env.I_UNDERSTAND_THIS_IS_SUPERSEDED !== "1") {
+  console.error("Refusing to run: this script is superseded and would roll ~979 rows back to the");
+  console.error("pre-city region vocabulary. See the comment at the top of this file.");
+  console.error("Current implementation: deriveGeo() in src/lib/events.ts (backfill-geo.mjs).");
+  process.exit(1);
+}
 
 function canonicalRegion({ location, region, title, isOnline, type }) {
   const hay = ` ${location ?? ""} ${region ?? ""} ${title ?? ""} `.toLowerCase();
