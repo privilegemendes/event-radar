@@ -9,6 +9,7 @@ Internal tool for **Irmak Eyiceoglu** (Coder EMEA Partner Manager) to discover, 
 - **Calendar availability** — checks a read-only Google Calendar ICS feed to flag whether Irmak is free for an event/webinar
 - **Apply helper** — saved Applicant Profile with one-click copy / prefilled email to speed up CFP applications
 - **Event pipeline** — Track events from DISCOVERED → APPROVED → PITCHED → ACCEPTED → SPOKEN
+- **Configurable speaker brief** — discovery, scoring and pitches are rendered from a stored profile (speaking level, topics, geographies, credentials, employer angle, exclusions) rather than hardcoded, so the app can be pointed at a different speaker from Settings
 - **AI Discovery** — Claude (Anthropic) searches the web for relevant events and podcasts seeking speakers
 - **Pitch generator** — Claude drafts tailored speaker application emails
 - **Partner-scoped discovery** — Find events linked to specific EMEA partners
@@ -24,6 +25,12 @@ npm install
 npx prisma migrate dev --name init
 npx prisma db seed
 npm run dev
+```
+
+Run the tests with:
+
+```bash
+npm test
 ```
 
 ## Default Logins
@@ -46,6 +53,7 @@ The app will display a banner until the default password is changed.
 |----------|-------------|
 | `DATABASE_URL` | SQLite: `file:./prisma/dev.db`. Postgres in prod: `postgresql://...` |
 | `SESSION_SECRET` | 64-char hex secret for JWT signing |
+| `OWNER_EMAIL` | Owner account — sees the Podium and private events. Defaults to `irmak@coder.com`. |
 
 ### Production (set manually)
 
@@ -57,6 +65,34 @@ The app will display a banner until the default password is changed.
 | `ANTHROPIC_AUTH_TOKEN` | Anthropic API authentication token |
 
 > In the Coder workspace, `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` are injected automatically. Do not commit them to `.env`.
+
+## Speaker brief
+
+Every prompt sent to Claude is rendered from the profile stored in
+**Settings → Speaker Brief**, not hardcoded. The fields that change AI behaviour:
+
+| Field | Effect |
+|-------|--------|
+| Speaking level | Selects the scoring rubric. `FIRST_TIME` scores meetups and podcasts highest and mega-conference keynotes lowest; `KEYNOTE` inverts that. |
+| Signature topics | Searched for, and scored against. |
+| Priority locations | Discovery searches each one separately (depth comes from distinct slices). |
+| Speaking credentials | Cited in generated pitch emails. |
+| Employer angle | Enables the PARTICIPATE track and the employer-framed pitch. Blank = always pitch as an independent speaker. |
+| Excluded event types | Dropped from discovery entirely. Blank = nothing excluded. |
+| Private-event keywords | Matching events are visible only to the owner. |
+| Rubric override | Replaces the generated rubric wholesale. |
+
+The builders live in `src/lib/speaker-brief.ts` and are pure functions covered by
+`src/lib/speaker-brief.test.ts`.
+
+> **Upgrading an existing deployment:** the profile row predates these fields, so
+> back-fill them with the values that used to be hardcoded before the next
+> discovery run — otherwise it goes out with an empty brief:
+>
+> ```bash
+> npx tsx scripts/backfill-speaker-brief.ts          # dry run
+> npx tsx scripts/backfill-speaker-brief.ts --write  # apply
+> ```
 
 ## Discovery
 
@@ -91,19 +127,38 @@ Discovery also runs on a schedule so new events keep arriving without clicking a
 
 ### Prerequisites & blockers
 
-1. **Access protection (required).** Viewing in this app is intentionally open —
+> Items 1 and 2 were open blockers and are now resolved; they are kept here as
+> standing constraints rather than to-dos.
+
+1. **Access protection — DONE.** Viewing in this app is intentionally open —
    there is no login wall for reads (`GET`s are public; only writes require an
-   admin session). Inside the Coder workspace that is safe because the Coder
-   proxy limits who can reach it. On a **public Vercel URL, viewing would be open
-   to anyone with the link**, so enable **Vercel Access Protection**
-   (Standard Protection / SSO, or Password Protection — Pro/Enterprise) on the
-   project, or place it behind Coder/Google SSO, **before sharing the URL**.
-2. **Database.** Dev uses SQLite on a local file (`prisma/dev.db`), which does
-   **not** work on Vercel's ephemeral filesystem. Switch the Prisma datasource to
-   a hosted **Postgres** (Vercel Postgres / Neon), run migrations, and set
-   `DATABASE_URL`. (Supabase requires IT coordination via #help-me-ops.)
-3. **Function duration.** Discovery/analyze routes set `maxDuration = 300`, which
-   requires a **Vercel Pro** team (Hobby caps well below that).
+   admin session), so a public Vercel URL would be readable by anyone with the
+   link. **Vercel Access Protection is now enabled** on the project
+   (`ssoProtection`, covering production URLs *and* all previews), which closes
+   this. Verified 2026-09-21 via the Vercel API. Do not disable it without
+   putting an equivalent gate in front — the app has no read-side login of its
+   own.
+2. **Database — DONE.** The Prisma datasource is already `postgresql`, backed by
+   a hosted **Neon** instance, with `DATABASE_URL` (pooled) and
+   `DATABASE_URL_UNPOOLED` (direct) set. Verified 2026-09-21 by connecting to it.
+   Note Neon auto-suspends: a cold start can exceed Prisma's default 10s pool
+   timeout, so one-off scripts should use the unpooled URL with a raised
+   `connect_timeout` (see `scripts/backfill-speaker-brief.ts`).
+3. **Function duration — probably fine, not proven at runtime.** Discovery,
+   analyze and cron routes set `maxDuration = 300`. This was written down as
+   needing a **Vercel Pro** team; that looks outdated:
+
+   - Vercel's current docs show `export const maxDuration = 1800` as a valid
+     App Router value, and the platform default is now 300s across plans.
+   - A build on the **Hobby** team accepted all three 300s routes with no
+     warning (2026-09-21).
+
+   What has **not** been shown is that a request actually survives past the old
+   60s ceiling at runtime — a plan cap would clamp silently at invocation, not
+   fail the build. To settle it, deploy a route that sleeps ~75s and open it in
+   a browser (deployments are behind Vercel SSO, so an unauthenticated fetch
+   just 302s to `vercel.com/sso-api`). If the 300s limit does *not* hold, the
+   weekly cron discovery run is what breaks.
 4. **Env vars** (Vercel project settings): `DATABASE_URL`, `SESSION_SECRET`,
    `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`. The `ANTHROPIC_*` values are only
    injected inside Coder workspaces — copy them into Vercel manually.

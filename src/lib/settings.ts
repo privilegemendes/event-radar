@@ -1,5 +1,8 @@
 import "server-only";
 import { db } from "./db";
+import { EMPTY_PROFILE, type ApplicantProfile } from "./profile-schema";
+
+export * from "./profile-schema";
 
 /**
  * Simple key/value settings store backed by the AppSetting table.
@@ -11,42 +14,6 @@ export const SETTINGS_KEYS = {
   calendarIcsUrl: "calendar_ics_url",
   autoDiscovery: "auto_discovery_enabled",
 } as const;
-
-export interface ApplicantProfile {
-  fullName: string;
-  jobTitle: string;
-  company: string;
-  email: string;
-  phone: string;
-  location: string;
-  linkedin: string;
-  twitter: string;
-  website: string;
-  headshotUrl: string;
-  bioShort: string;
-  bioLong: string;
-  talkTopics: string;
-  dietary: string;
-  pronouns: string;
-}
-
-export const EMPTY_PROFILE: ApplicantProfile = {
-  fullName: "",
-  jobTitle: "",
-  company: "",
-  email: "",
-  phone: "",
-  location: "",
-  linkedin: "",
-  twitter: "",
-  website: "",
-  headshotUrl: "",
-  bioShort: "",
-  bioLong: "",
-  talkTopics: "",
-  dietary: "",
-  pronouns: "",
-};
 
 export async function getSetting(key: string): Promise<string | null> {
   const row = await db.appSetting.findUnique({ where: { key } });

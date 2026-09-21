@@ -39,7 +39,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ skipped: true, reason: "a run is already in progress" });
   }
 
-  const focus = rotatingFocus();
+  const focus = await rotatingFocus();
   const result = await runDiscovery({ focus });
   return NextResponse.json({
     ok: result.ok,

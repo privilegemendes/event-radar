@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { OWNER_EMAIL } from "@/lib/owner";
 
 /* ── Inline SVG nav icons ── */
 const IconOverview = () => (
@@ -109,7 +108,7 @@ export default function Sidebar({ role }: SidebarProps) {
     // Identity: the Podium is owner-only.
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((d: { email?: string | null }) => setIsOwnerUser((d?.email ?? "").toLowerCase() === OWNER_EMAIL))
+      .then((d: { isOwner?: boolean }) => setIsOwnerUser(!!d?.isOwner))
       .catch(() => setIsOwnerUser(false));
     // Badge counts — inbox (DISCOVERED), podium (ACCEPTED or attending) and
     // Coder Events (EMEA). Counted server-side: these are three integers, and
