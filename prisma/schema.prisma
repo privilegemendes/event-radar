@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+enum EventType {
+  CONFERENCE
+  MEETUP
+  EVENT
+  PODCAST
+  WEBINAR
+}
+
+enum EventStatus {
+  DISCOVERED
+  APPROVED
+  PITCHED
+  ACCEPTED
+  SPOKEN
+  REJECTED
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  passwordHash       String
+  name               String
+  role               Role     @default(VIEWER)
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+}
+
+model Partner {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  category    String
+  stage       String
+  stageStatus String
+  country     String
+  keyContact  String
+  notes       String
+  region      String?  // NAMER | EMEA | LATAM | APAC
+  tier        String?  // T1 | T2 | T3
+  events      Event[]
+  createdAt   DateTime @default(now())
+}
+
+model Event {
+  id                   String      @id @default(cuid())
+  title                String
+  type                 EventType
+  startDate            DateTime?
+  endDate              DateTime?
+  location             String?
+  isOnline             Boolean     @default(false)
+  region               String?     // macro region: North America | UK | Europe | Middle East | Africa | Asia Pacific | Online | Other
+  city                 String?     // specific city, e.g. "San Francisco", "London", "Amsterdam", "Austin"
+  coderRelevant        Boolean     @default(false)
+  ownerOnly            Boolean     @default(false)   // private to the owner (e.g. nomad-related events)
+  category             String?     // ATTEND | PARTICIPATE | SPEAK (top-level track)
+  audienceSignals      String?     // JSON array of audience tags (DEVELOPERS, CUSTOMERS, WOMEN_IN_TECH, …)
+  status               EventStatus @default(DISCOVERED)
+  cfpDeadline          DateTime?
+  url                  String?
+  contact              String?
+  description          String?
+  sourceNote           String?
+  partnerId            String?
+  partner              Partner?    @relation(fields: [partnerId], references: [id])
+  pitchDraft           String?
+  followUpAt           DateTime?
+
+  // ── Opportunity intelligence ──
+  isPaid               Boolean?   // true = speaker paid (honorarium), false = unpaid, null = unknown
+  paidNote             String?    // e.g. "€500 honorarium" or "speakers pay own travel"
+  ticketCost           String?    // cost to ATTEND / ticket price, e.g. "Free", "~€1,995 (approx)", "From €99"
+  audienceDescription  String?    // who the audience is
+  audienceSize         Int?       // estimated total audience
+  otherSpeakers        String?    // notable confirmed / past speakers
+  acceptanceLikelihood String?    // HIGH | MEDIUM | LOW
+  acceptanceRationale  String?    // one sentence explaining the rating
+  howToApply           String?    // CFP form URL, email, LinkedIn DM, etc.
+
+  // ── Speaker fit analysis ──
+  industry            String?    // e.g. "startups/entrepreneurship", "enterprise IT", "digital nomads"
+  relevancyScore      Int?       // 0-100: how realistic/valuable for Irmak to get a speaking slot
+  relevancyRationale  String?    // 1-2 sentences explaining the score
+  suggestedAction     String?    // ATTEND | APPLY_TO_SPEAK | BOTH
+
+  // ── Readiness tracking ──
+  attending           Boolean    @default(false)  // user explicitly marked as attending
+  readiness           String?    // JSON: { [checklistKey]: boolean }
+  prepStage           String?    // current preparation stage key
+  customTasks         String?    // JSON: [{id, label, done}]
+
+  // ── Application links ──
+  applyUrl            String?    // direct CFP / speaker application (SPEAK) page URL
+  attendUrl           String?    // direct attendee registration / tickets (ATTEND) page URL
+  socialLinks         String?    // JSON: {linkedin, instagram, twitter, youtube, facebook}
+
+  // ── Coder company events ──
+  isCoderEvent        Boolean    @default(false) // event is on the official Coder event schedule
+
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+}
+
+model Speaker {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  title         String?         // job title / role
+  company       String?
+  linkedinUrl   String?         // direct profile URL if found
+  background    String?         // short bio / why relevant
+  topics        String?         // comma-separated talk topics
+  region        String?
+  talkCount     Int      @default(0)   // how often they speak across tracked events
+  eventsJson    String?         // JSON array: [{ id, title, startDate }]
+  outreachNote  String?         // generated personalized LinkedIn invite note
+  sourceNote    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   // JSON or plain string; may hold secrets (e.g. calendar ICS URL)
+  updatedAt DateTime @updatedAt
+}
+
+model DiscoveryRun {
+  id         String    @id @default(cuid())
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  status     String    @default("RUNNING")
+  summary    String?
+  found      Int       @default(0)
+}

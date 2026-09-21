@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* ── Coder brand tokens ── */
+:root {
+  --coder-bg:        #090B0B;
+  --coder-panel:     #101314;
+  --coder-panel-alt: #141718;
+  --coder-border:    rgba(255,255,255,0.08);
+  --coder-purple:    #BC7CFF;
+  --coder-green:     #66FFAB;
+  --coder-cyan:      #01F2FF;
+  --coder-coral:     #FF8067;
+  --coder-pink:      #F08DFF;
+}
+
+/* Make brand colors available as Tailwind utilities (bg-brand-purple, etc.) */
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-coder-bg:     var(--coder-bg);
+  --color-coder-panel:  var(--coder-panel);
+  --color-coder-purple: var(--coder-purple);
+  --color-coder-green:  var(--coder-green);
+  --color-coder-cyan:   var(--coder-cyan);
+  --color-coder-coral:  var(--coder-coral);
+  --color-coder-pink:   var(--coder-pink);
+}
+
+/* ── Reset & base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html, body {
+  background: var(--coder-bg);
+  color: #ffffff;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Native select / input dark override ── */
+input, select, textarea {
+  color-scheme: dark;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--coder-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(188,124,255,0.4);
+}
+
+/* ── Focus visible ring ── */
+:focus-visible {
+  outline: 2px solid var(--coder-purple);
+  outline-offset: 2px;
+}
