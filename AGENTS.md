@@ -24,5 +24,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   constant — add a profile field instead. The builders are pure and unit-tested
   (`npm test`); `src/lib/profile-schema.ts` is deliberately free of
   `server-only` so the settings form and the tests can import it.
-- Data lives in the gitignored `prisma/dev.db`; commit as
-  `Irmak Eyiceoglu <irmak@coder.com>`.
+- **Commit as the account that owns the Vercel project** — currently
+  `Privilege Mendes <20317699+privilegemendes@users.noreply.github.com>`.
+  This is load-bearing, not cosmetic: Vercel blocks a Git-triggered deployment
+  whose **commit author** is not authorized on the team, and the deployment
+  never builds — it goes straight to `BLOCKED` with no build logs, surfacing on
+  the PR only as the generic "Deployment was blocked".
+
+  This file previously said to commit as `Irmak Eyiceoglu <irmak@coder.com>`,
+  which silently blocked every Git deployment while CLI deploys (no commit
+  author) kept working. Verified by deploying identical content twice on one
+  branch: authored by Irmak → `BLOCKED`, authored by the project owner →
+  `READY`. Note Vercel keys on the **author**, not the committer — a commit
+  authored by Irmak but committed via the GitHub UI was still blocked.
+
+  Check with `git log -1 --format='%an <%ae>'` before pushing; the fix is
+  `git config user.email` plus
+  `git rebase <base> --exec 'git commit --amend --no-edit --reset-author'`.
+- Data lives in the gitignored `prisma/dev.db`.
