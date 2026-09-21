@@ -132,9 +132,9 @@ export default function MapPage() {
       ) : (
         <div className="grid lg:grid-cols-[1fr_220px] gap-4">
           {/* Map */}
-          <div className="bg-coder-surface border border-white/[0.08] rounded-xl p-2 overflow-hidden">
+          <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-2 overflow-hidden">
             <svg viewBox="0 15 360 140" className="w-full h-auto" style={{ display: "block" }}>
-              <rect x="0" y="15" width="360" height="140" fill={BRAND.sunken} />
+              <rect x="0" y="15" width="360" height="140" fill={BRAND.bg} />
               {geo?.features.map((f, i) => (
                 <path key={i} d={geomToPath(f.geometry)} fill="#171B1C" stroke="#242829" strokeWidth={0.2} />
               ))}

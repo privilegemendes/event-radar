@@ -13,8 +13,6 @@
  */
 export const BRAND = {
   bg: "#090B0B",
-  sunken: "#0A0C0D",
-  surface: "#0C0E0F",
   control: "#0D1011",
   panel: "#101314",
   panelAlt: "#141718",

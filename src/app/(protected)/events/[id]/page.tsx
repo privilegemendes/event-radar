@@ -483,7 +483,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
           {event.pitchDraft ? (
-            <textarea rows={10} className="w-full px-3 py-2.5 bg-coder-sunken border border-white/10 rounded-lg text-sm text-white/80 font-mono focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple resize-y transition-colors"
+            <textarea rows={10} className="w-full px-3 py-2.5 bg-coder-control border border-white/10 rounded-lg text-sm text-white/80 font-mono focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple resize-y transition-colors"
               value={form.pitchDraft ?? event.pitchDraft}
               onChange={(e) => { set("pitchDraft", e.target.value); setEdited(true); }} />
           ) : (

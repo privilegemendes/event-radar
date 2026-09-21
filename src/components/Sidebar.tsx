@@ -234,7 +234,7 @@ export default function Sidebar({ role }: SidebarProps) {
 
       {/* Mobile drawer */}
       <aside
-        className={`md:hidden fixed top-0 left-0 z-50 h-full w-60 bg-coder-surface border-r border-white/[0.07] transform transition-transform duration-200 ${
+        className={`md:hidden fixed top-0 left-0 z-50 h-full w-60 bg-coder-panel border-r border-white/[0.07] transform transition-transform duration-200 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -248,7 +248,7 @@ export default function Sidebar({ role }: SidebarProps) {
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-56 bg-coder-surface border-r border-white/[0.07] flex-shrink-0">
+      <aside className="hidden md:flex flex-col w-56 bg-coder-panel border-r border-white/[0.07] flex-shrink-0">
         <SidebarHeader />
         <nav className="relative flex-1 p-3 space-y-0.5 overflow-y-auto">
           <NavLinks />
