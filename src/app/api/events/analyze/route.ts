@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { getApplicantProfile } from "@/lib/settings";
+import { buildSpeakerProfile, buildScoringRubric } from "@/lib/speaker-brief";
 
 export const maxDuration = 300;
 
@@ -18,24 +20,6 @@ type AnalysisResult = {
   audienceSignals?: string[] | null;
   socialLinks?: Record<string, string | null> | null;
 };
-
-const SPEAKER_PROFILE = `Irmak Eyiceoglu — first-time speaker building a track record.
-• Day job: EMEA Partner Manager at Coder (AI devtools / self-hosted cloud dev environments, $90M Series C). Partner events = networking in her Coder role, NOT personal speaking.
-• Speaking credential: confirmed speaker at Nomad Cruise 17 AI Edition (Sept 2026, Atlantic crossing, 150 founders & digital nomads aboard Queen Mary 2).
-• Best-fit topics: Sovereign AI, practical AI for non-technical founders/entrepreneurs, AI literacy for individuals.
-• Realistic stage: meetups, podcasts, workshops, small summits, founder communities, entrepreneur events.
-• NOT realistic yet: keynotes at mega-conferences (AWS re:Invent, KubeCon, Microsoft Ignite, Gartner, Dreamforce).`;
-
-const SCORING_RUBRIC = `RELEVANCY SCORE (0-100):
-85-100 → Meetups, podcasts, workshops, founder/entrepreneur communities, digital nomad events, AI literacy events, small summits with open speaker tracks. suggestedAction: APPLY_TO_SPEAK.
-65-84  → Medium tech/startup conferences with open tracks; AI webinars; events where audience includes entrepreneurs/founders. suggestedAction: APPLY_TO_SPEAK or BOTH.
-40-64  → Larger conferences with CFPs but high competition; adjacent topics. suggestedAction: BOTH.
-20-39  → Big enterprise/developer mega-conferences (attend for networking only). suggestedAction: ATTEND.
-0-19   → Academic events; partner-hosted events (Coder EMEA partner manager networking); cybersecurity/infosec events; narrow single-vertical events (fintech-only, healthcare-only, government procurement, transport, utilities). suggestedAction: ATTEND.
-
-industry field: short vertical label, e.g. "startups/entrepreneurship", "enterprise IT", "digital nomads", "fintech", "AI education", "developer tools", "sovereign AI", "corporate innovation", "founder communities".
-
-suggestedAction: "ATTEND" | "APPLY_TO_SPEAK" | "BOTH"`;
 
 export async function POST() {
   try {
@@ -68,6 +52,10 @@ export async function POST() {
     if (!baseUrl || !authToken)
       return NextResponse.json({ error: "Anthropic credentials not configured" }, { status: 503 });
 
+    const profile = await getApplicantProfile();
+    const speakerBlock = buildSpeakerProfile(profile, "full");
+    const rubricBlock = buildScoringRubric(profile);
+
     const eventList = events.map((ev, i) => {
       const partnerNote = ev.partner ? `Partner: ${ev.partner.name} (${ev.partner.category})` : "No partner link";
       return `#${i + 1}: "${ev.title}"
@@ -80,9 +68,9 @@ Audience: ${ev.audienceDescription ?? "unknown"}`;
 
     const prompt = `You are analyzing ${events.length} speaking opportunity events for this speaker:
 
-${SPEAKER_PROFILE}
+${speakerBlock}
 
-${SCORING_RUBRIC}
+${rubricBlock}
 
 IMPORTANT: For each event, use web search to find:
 1. The direct URL to submit a speaker application / CFP form / attendee registration (applyUrl). Only return URLs you actually find in search results — do NOT guess or invent URLs.
@@ -105,7 +93,7 @@ Return ONLY a JSON array of exactly ${events.length} objects IN THE SAME ORDER a
   "relevancyScore": 0-100 integer,
   "relevancyRationale": "1-2 sentences explaining the score",
   "suggestedAction": "ATTEND" | "APPLY_TO_SPEAK" | "BOTH",
-  "category": "ATTEND" | "PARTICIPATE" | "SPEAK",   // top-level track. SPEAK = realistic personal speaking slot (suggestedAction APPLY_TO_SPEAK/BOTH). PARTICIPATE = she'd go in her Coder role / Coder sponsors or exhibits / audience is customers & partners. ATTEND = individual attendance, no Coder or speaking angle.
+  "category": "ATTEND" | "PARTICIPATE" | "SPEAK",   // top-level track. SPEAK = realistic personal speaking slot (suggestedAction APPLY_TO_SPEAK/BOTH). PARTICIPATE = attended in the employer role, or the employer sponsors or exhibits, or the audience is that employer's customers and partners — only when the profile describes an employer angle. ATTEND = individual attendance, no employer or speaking angle.
   "audienceSignals": ["DEVELOPERS" | "ENGINEERS" | "CUSTOMERS" | "ENTREPRENEURS" | "SMBS" | "PROFESSIONALS" | "WOMEN_IN_TECH" | "PARTNERS"],   // every tag that clearly applies
   "applyUrl": "direct verified URL for speaker application or attendee registration, null if not found",
   "ticketCost": "attendance/ticket price if published (e.g. 'Free', '~€1,995', 'From €99'), else null",

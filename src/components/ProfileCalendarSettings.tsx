@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ApplicantProfile } from "@/lib/settings";
+import { SPEAKING_LEVELS, SPEAKING_LEVEL_LABELS, type SpeakingLevel } from "@/lib/settings";
 
 const inputCls =
   "w-full px-3 py-2.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";
@@ -26,6 +27,18 @@ const TEXTAREA_FIELDS: { key: keyof ApplicantProfile; label: string; ph?: string
   { key: "bioLong", label: "Long bio" },
   { key: "talkTopics", label: "Talk topics / abstracts" },
   { key: "dietary", label: "Dietary / accessibility needs" },
+];
+
+/* Speaker-brief fields. Unlike the applicant fields above these are fed to the
+   LLM, so the hints describe what each one changes about discovery output. */
+const BRIEF_FIELDS: { key: keyof ApplicantProfile; label: string; hint: string; rows?: number }[] = [
+  { key: "signatureTopics", label: "Signature topics", hint: "One per line. Searched for, and scored against." },
+  { key: "homeGeographies", label: "Priority locations", hint: "One per line, e.g. \"Amsterdam, NL\". Discovery searches each separately." },
+  { key: "credentials",     label: "Speaking credentials", hint: "One per line. Cited in generated pitches." },
+  { key: "employerAngle",   label: "Employer angle", hint: "How your employer is positioned in pitches. Leave blank if you speak independently — the Participate track and employer pitches switch off.", rows: 3 },
+  { key: "excludedDomains", label: "Excluded event types", hint: "One per line. Dropped from discovery entirely. Blank means nothing is excluded." },
+  { key: "privateKeywords", label: "Private-event keywords", hint: "One per line. Matching events are visible only to the owner." },
+  { key: "rubricOverride",  label: "Scoring rubric override", hint: "Advanced: replaces the generated rubric wholesale. Leave blank to use the one generated from your speaking level.", rows: 4 },
 ];
 
 export default function ProfileCalendarSettings() {
@@ -180,6 +193,59 @@ export default function ProfileCalendarSettings() {
                 />
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Speaker Brief — drives discovery, scoring and pitches */}
+      <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 mb-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40 mb-1">Speaker Brief</p>
+        <p className="text-sm text-white/50 mb-4">
+          Steers AI discovery, scoring and pitch drafting. Changes apply to the next discovery run.
+        </p>
+
+        {!profile ? (
+          <p className="font-mono text-xs text-white/30">Loading…</p>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className={labelCls}>Speaking level</label>
+              <select
+                className={inputCls}
+                value={profile.speakingLevel || "FIRST_TIME"}
+                onChange={(e) => setField("speakingLevel", e.target.value)}
+              >
+                {SPEAKING_LEVELS.map((lvl: SpeakingLevel) => (
+                  <option key={lvl} value={lvl}>{SPEAKING_LEVEL_LABELS[lvl]}</option>
+                ))}
+              </select>
+              <p className="font-mono text-[9px] text-white/25 mt-1.5 leading-relaxed">
+                Selects the scoring rubric. A first-timer scores meetups and podcasts highest; a keynote speaker scores them lowest.
+              </p>
+            </div>
+
+            {BRIEF_FIELDS.map(({ key, label, hint, rows }) => (
+              <div key={key}>
+                <label className={labelCls}>{label}</label>
+                <textarea
+                  rows={rows ?? 2}
+                  className={`${inputCls} resize-y`}
+                  value={profile[key] ?? ""}
+                  onChange={(e) => setField(key, e.target.value)}
+                />
+                <p className="font-mono text-[9px] text-white/25 mt-1.5 leading-relaxed">{hint}</p>
+              </div>
+            ))}
+
+            {/* Same handler as the applicant card — one PUT saves the whole
+                profile — but repeated here so the brief can be saved in place. */}
+            <button
+              onClick={saveProfile}
+              disabled={savingProfile}
+              className="px-4 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
+            >
+              {savingProfile ? "Saving…" : profileSaved ? "Saved ✓" : "Save brief"}
+            </button>
           </div>
         )}
       </div>

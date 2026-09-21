@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { capNote } from "@/lib/text";
+import { getApplicantProfile } from "@/lib/settings";
+import { buildSpeakerProfile, speakerName, parseList } from "@/lib/speaker-brief";
 
 export const maxDuration = 300;
 
@@ -38,12 +40,6 @@ function extractJsonArray(text: string): unknown[] | null {
   }
   return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
 }
-
-const SPEAKER_PROFILE = `Irmak Eyiceoglu — first-time speaker building a track record.
-• Day job: EMEA Partner Manager at Coder (AI devtools / self-hosted cloud dev environments).
-• Signature topic: Sovereign AI, and practical AI for non-technical founders/entrepreneurs.
-• Confirmed gig: speaker at Nomad Cruise 17 AI Edition (Sept 2026).
-• Goal: connect with experienced AI-event speakers to (a) ask advice on how to start speaking, and (b) explore speaking opportunities they can point her to.`;
 
 type RawSpeaker = {
   name?: string;
@@ -95,16 +91,22 @@ export async function POST(request: NextRequest) {
       `#${i + 1}: "${e.title}" | ${e.location ?? (e.region ?? "location?")} | ${e.startDate ? new Date(e.startDate).toISOString().slice(0, 10) : "date?"} | ${e.url ?? "no url"}${e.otherSpeakers ? ` | known: ${e.otherSpeakers}` : ""}`
     ).join("\n");
 
-    const prompt = `${SPEAKER_PROFILE}
+    const profile = await getApplicantProfile();
+    const speakerBlock = buildSpeakerProfile(profile, "outreach");
+    const name = speakerName(profile);
+    const topics = parseList(profile.signatureTopics);
+    const topicLine = topics.length ? topics.join(", ") : "the event's subject area";
 
-Use web search to find the ANNOUNCED / CONFIRMED / PAST speakers for the events below (check the event's official speakers page, agenda, and LinkedIn). For each event, return up to 4 of the most relevant speakers — prioritise those who speak about AI, Sovereign AI, startups/founders, or who are frequent conference speakers (people Irmak could learn from or approach).
+    const prompt = `${speakerBlock}
+
+Use web search to find the ANNOUNCED / CONFIRMED / PAST speakers for the events below (check the event's official speakers page, agenda, and LinkedIn). For each event, return up to 4 of the most relevant speakers — prioritise those who speak about ${topicLine}, or who are frequent conference speakers (people ${name} could learn from or approach).
 
 For EACH speaker, also research (via web search):
 - their current job title and company,
 - their LinkedIn profile URL (only if you actually find it — else null),
 - a one-sentence background (why they're notable / what they speak about),
 - the topics they speak on,
-- and write a warm, authentic, CREATIVE, personalised LinkedIn connection note (under 280 characters) FROM Irmak TO that speaker. Reference something genuinely specific about them, their talk, or their work, and make it land — memorable, human, and a little clever. IMPORTANT: do NOT ask for anything (no advice, no meeting, no call, no opportunity, no favour) — it is purely a genuine personal note that makes them want to accept the connection. First person as Irmak. No emojis, no hashtags, not salesy.
+- and write a warm, authentic, CREATIVE, personalised LinkedIn connection note (under 280 characters) FROM ${name} TO that speaker. Reference something genuinely specific about them, their talk, or their work, and make it land — memorable, human, and a little clever. IMPORTANT: do NOT ask for anything (no advice, no meeting, no call, no opportunity, no favour) — it is purely a genuine personal note that makes them want to accept the connection. First person as ${name}. No emojis, no hashtags, not salesy.
 
 Events:
 ${eventList}
