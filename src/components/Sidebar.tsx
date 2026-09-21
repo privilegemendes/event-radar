@@ -111,29 +111,21 @@ export default function Sidebar({ role }: SidebarProps) {
       .then((r) => r.json())
       .then((d: { email?: string | null }) => setIsOwnerUser((d?.email ?? "").toLowerCase() === OWNER_EMAIL))
       .catch(() => setIsOwnerUser(false));
-    // Inbox count: DISCOVERED events
-    fetch("/api/events?status=DISCOVERED")
+    // Badge counts — inbox (DISCOVERED), podium (ACCEPTED or attending) and
+    // Coder Events (EMEA). Counted server-side: these are three integers, and
+    // reading them from the full event list cost ~1.8 MB on every navigation.
+    fetch("/api/events/counts")
       .then((r) => r.json())
-      .then((data: unknown[]) => setInboxCount(Array.isArray(data) ? data.length : 0))
-      .catch(() => setInboxCount(0));
-    // Gigs count: ACCEPTED speaking gigs + events marked as attending
-    fetch("/api/events")
-      .then((r) => r.json())
-      .then((data: { status?: string; attending?: boolean }[]) =>
-        setGigsCount(Array.isArray(data)
-          ? data.filter((e) => e.status === "ACCEPTED" || e.attending).length
-          : 0))
-      .catch(() => setGigsCount(0));
-    // Coder Events: EMEA events from Coder's schedule
-    fetch("/api/events?isCoderEvent=true")
-      .then((r) => r.json())
-      .then((data: { region?: string }[]) => {
-        if (!Array.isArray(data)) return setCoderEventsCount(0);
-        setCoderEventsCount(
-          data.filter((e) => e.region === "Amsterdam/NL" || e.region === "Rest of Europe").length
-        );
+      .then((d: { inbox?: number; gigs?: number; coderEvents?: number }) => {
+        setInboxCount(d?.inbox ?? 0);
+        setGigsCount(d?.gigs ?? 0);
+        setCoderEventsCount(d?.coderEvents ?? 0);
       })
-      .catch(() => setCoderEventsCount(0));
+      .catch(() => {
+        setInboxCount(0);
+        setGigsCount(0);
+        setCoderEventsCount(0);
+      });
   }, [pathname]);
 
   const isActive = (href: string) => {
