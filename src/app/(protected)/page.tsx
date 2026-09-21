@@ -81,17 +81,17 @@ function sortEvents(evs: Event[]): Event[] {
 }
 
 const STAT_BORDER: Record<string, string> = {
-  DISCOVERED: "border-white/15", APPROVED: "border-[#01F2FF]/50",
-  PITCHED: "border-[#BC7CFF]/50", ACCEPTED: "border-[#66FFAB]/50",
-  SPOKEN: "border-[#66FFAB]/30", REJECTED: "border-[#FF8067]/50",
+  DISCOVERED: "border-white/15", APPROVED: "border-coder-cyan/50",
+  PITCHED: "border-coder-purple/50", ACCEPTED: "border-coder-green/50",
+  SPOKEN: "border-coder-green/30", REJECTED: "border-coder-coral/50",
 };
 const STAT_NUM: Record<string, string> = {
-  DISCOVERED: "text-white/70", APPROVED: "text-[#01F2FF]",
-  PITCHED: "text-[#BC7CFF]", ACCEPTED: "text-[#66FFAB]",
-  SPOKEN: "text-[#66FFAB]/70", REJECTED: "text-[#FF8067]",
+  DISCOVERED: "text-white/70", APPROVED: "text-coder-cyan",
+  PITCHED: "text-coder-purple", ACCEPTED: "text-coder-green",
+  SPOKEN: "text-coder-green/70", REJECTED: "text-coder-coral",
 };
 
-const selCls = "px-3 py-1.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white/80 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";
+const selCls = "px-3 py-1.5 bg-coder-control border border-white/10 rounded-lg text-sm text-white/80 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : null;
@@ -240,7 +240,7 @@ export default function OverviewPage() {
             className={`px-3.5 py-2 rounded-lg border text-left transition-colors ${
               categoryTab === ""
                 ? "bg-white/[0.06] border-white/25 text-white"
-                : "bg-[#101314] border-white/[0.07] text-white/45 hover:text-white/80 hover:border-white/15"
+                : "bg-coder-panel border-white/[0.07] text-white/45 hover:text-white/80 hover:border-white/15"
             }`}
           >
             <span className="font-mono text-[11px] uppercase tracking-[0.08em]">All tracks</span>
@@ -254,7 +254,7 @@ export default function OverviewPage() {
                 key={cat}
                 onClick={() => setCategoryTab(active ? "" : cat)}
                 className={`px-3.5 py-2 rounded-lg border text-left transition-colors ${
-                  active ? "bg-[#101314]" : "bg-[#101314] hover:border-white/15"
+                  active ? "bg-coder-panel" : "bg-coder-panel hover:border-white/15"
                 }`}
                 style={{
                   borderColor: active ? accent : "rgba(255,255,255,0.07)",
@@ -291,11 +291,11 @@ export default function OverviewPage() {
         {[
           { key: "DISCOVERED", label: "Discovered", value: byStatus["DISCOVERED"] ?? 0, num: STAT_NUM["DISCOVERED"], border: STAT_BORDER["DISCOVERED"], filter: "DISCOVERED" as string | null },
           { key: "APPROVED",   label: "Approved",   value: byStatus["APPROVED"] ?? 0,   num: STAT_NUM["APPROVED"],   border: STAT_BORDER["APPROVED"],   filter: "APPROVED" as string | null },
-          { key: "UPCOMING",   label: "Upcoming",   value: upcoming,                    num: "text-[#66FFAB]",       border: "border-white/[0.08]",     filter: null },
+          { key: "UPCOMING",   label: "Upcoming",   value: upcoming,                    num: "text-coder-green",       border: "border-white/[0.08]",     filter: null },
         ].map((c) => (
           <button key={c.key}
             onClick={() => { if (c.filter) setStatusFilter(statusFilter.includes(c.filter) ? statusFilter.filter((s) => s !== c.filter) : [c.filter]); }}
-            className={`bg-[#101314] border ${c.border} rounded-xl p-4 text-left transition-colors ${c.filter ? "hover:bg-[#141718] cursor-pointer" : "cursor-default"} ${c.filter && statusFilter.includes(c.filter) ? "ring-1 ring-[#BC7CFF]" : ""}`}>
+            className={`bg-coder-panel border ${c.border} rounded-xl p-4 text-left transition-colors ${c.filter ? "hover:bg-coder-panel-alt cursor-pointer" : "cursor-default"} ${c.filter && statusFilter.includes(c.filter) ? "ring-1 ring-coder-purple" : ""}`}>
             <p className={`text-3xl font-bold font-mono ${c.num}`}>{c.value}</p>
             <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-white/30 mt-1">{c.label}</p>
           </button>
@@ -306,7 +306,7 @@ export default function OverviewPage() {
       {comingUp.length > 0 && (
         <div className="mb-7">
           <div className="flex items-baseline gap-2 mb-2.5">
-            <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#66FFAB]">Coming up — next 7 days</h2>
+            <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-coder-green">Coming up — next 7 days</h2>
             <span className="font-mono text-[10px] text-white/30">{comingUp.length}</span>
           </div>
           <div className="space-y-1.5">
@@ -314,18 +314,18 @@ export default function OverviewPage() {
               const link = registerLink(ev);
               return (
                 <div key={ev.id}
-                  className="flex flex-wrap items-center gap-3 bg-[#101314] border border-[#66FFAB]/20 rounded-xl px-4 py-2.5 hover:bg-[#141718] transition-colors">
+                  className="flex flex-wrap items-center gap-3 bg-coder-panel border border-coder-green/20 rounded-xl px-4 py-2.5 hover:bg-coder-panel-alt transition-colors">
                   {/* Small avatar */}
                   <EventAvatar event={ev} size={32} />
-                  <div className="font-mono text-[10px] text-[#66FFAB] w-20 flex-shrink-0">
+                  <div className="font-mono text-[10px] text-coder-green w-20 flex-shrink-0">
                     {new Date(ev.startDate!).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                   </div>
                   <button onClick={() => router.push(`/events/${ev.id}`)}
-                    className="text-left text-sm text-white hover:text-[#BC7CFF] transition-colors font-medium min-w-0 flex-1 truncate cursor-pointer">
+                    className="text-left text-sm text-white hover:text-coder-purple transition-colors font-medium min-w-0 flex-1 truncate cursor-pointer">
                     {ev.title}
                   </button>
                   {ev.partner && (
-                    <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-2 py-0.5 rounded-full bg-[#01F2FF]/10 text-[#01F2FF] flex-shrink-0">{ev.partner.name}</span>
+                    <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-2 py-0.5 rounded-full bg-coder-cyan/10 text-coder-cyan flex-shrink-0">{ev.partner.name}</span>
                   )}
                   {ev.suggestedAction && (
                     <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-2 py-0.5 rounded-full flex-shrink-0 ${ACTION_STYLES[ev.suggestedAction] ?? "bg-white/5 text-white/40"}`}>
@@ -335,7 +335,7 @@ export default function OverviewPage() {
                   <span className="font-mono text-[10px] text-white/35 flex-shrink-0">{ev.isOnline ? "Online" : ev.location ?? ""}</span>
                   {link ? (
                     <a href={link} target="_blank" rel="noopener noreferrer"
-                      className="flex-shrink-0 font-mono text-[10px] uppercase tracking-[0.08em] px-3 py-1.5 rounded-lg bg-[#66FFAB] text-black font-semibold hover:bg-[#8affc0] transition-colors">
+                      className="flex-shrink-0 font-mono text-[10px] uppercase tracking-[0.08em] px-3 py-1.5 rounded-lg bg-coder-green text-black font-semibold hover:bg-coder-green-hover transition-colors">
                       {ev.type === "WEBINAR" || ev.isOnline ? "Join / Register ↗" : "Get ticket ↗"}
                     </a>
                   ) : (
@@ -351,7 +351,7 @@ export default function OverviewPage() {
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2 mb-5">
         <input type="text" placeholder="Search events…" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)}
-          className="flex-1 min-w-40 px-3 py-1.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white/80 placeholder-white/25 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors" />
+          className="flex-1 min-w-40 px-3 py-1.5 bg-coder-control border border-white/10 rounded-lg text-sm text-white/80 placeholder-white/25 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors" />
         <MultiSelect label="All types" options={EVENT_TYPES} selected={typeFilter} onChange={setTypeFilter} />
         <MultiSelect label="All regions" options={REGIONS} selected={regionFilter} onChange={setRegionFilter} />
         <MultiSelect label="All cities" options={[...new Set(allEvents.map((e) => e.city).filter((c): c is string => !!c))].sort()} selected={cityFilter} onChange={setCityFilter} />
@@ -374,7 +374,7 @@ export default function OverviewPage() {
         {hasFilters && (
           <button onClick={clearFilters} className="px-3 py-1.5 text-xs text-white/40 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-colors">Clear</button>
         )}
-        <Link href="/events/new" className="ml-auto px-4 py-1.5 bg-[#BC7CFF] hover:bg-[#CA96FF] text-black text-sm font-semibold rounded-lg transition-colors">
+        <Link href="/events/new" className="ml-auto px-4 py-1.5 bg-coder-purple hover:bg-coder-purple-hover text-black text-sm font-semibold rounded-lg transition-colors">
           + New Event
         </Link>
       </div>
@@ -402,7 +402,7 @@ export default function OverviewPage() {
             {hasFilters ? "No events match your filters" : "No events yet"}
           </p>
           {hasFilters && (
-            <button onClick={clearFilters} className="mt-3 font-mono text-[9px] text-[#BC7CFF]/60 hover:text-[#BC7CFF] uppercase tracking-widest transition-colors">
+            <button onClick={clearFilters} className="mt-3 font-mono text-[9px] text-coder-purple/60 hover:text-coder-purple uppercase tracking-widest transition-colors">
               Clear filters
             </button>
           )}
@@ -421,7 +421,7 @@ export default function OverviewPage() {
                 tabIndex={0}
                 onClick={() => router.push(`/events/${ev.id}`)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/events/${ev.id}`); }}
-                className={`group bg-[#101314] hover:bg-[#141718] border border-white/[0.07] hover:border-[#BC7CFF]/20 rounded-xl px-4 py-3.5 transition-all duration-150 cursor-pointer ${isPast ? "opacity-60" : ""}`}
+                className={`group bg-coder-panel hover:bg-coder-panel-alt border border-white/[0.07] hover:border-coder-purple/20 rounded-xl px-4 py-3.5 transition-all duration-150 cursor-pointer ${isPast ? "opacity-60" : ""}`}
               >
                 <div className="flex items-start gap-3">
 
@@ -452,24 +452,24 @@ export default function OverviewPage() {
                         </span>
                       )}
                       {ev.industry && (
-                        <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#BC7CFF]/10 text-[#BC7CFF]/60 border border-[#BC7CFF]/20">{ev.industry}</span>
+                        <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-coder-purple/10 text-coder-purple/60 border border-coder-purple/20">{ev.industry}</span>
                       )}
                       {lh && LIKELIHOOD_STYLES[lh] && (
                         <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${LIKELIHOOD_STYLES[lh]}`}>{lh}</span>
                       )}
                       {ev.coderRelevant && (
-                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30">Coder</span>
+                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">Coder</span>
                       )}
                       {ev.isCoderEvent && (
-                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#BC7CFF]/20 text-[#BC7CFF] border border-[#BC7CFF]/40 font-semibold">CODER EVENT</span>
+                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/20 text-coder-purple border border-coder-purple/40 font-semibold">CODER EVENT</span>
                       )}
                       {ev.partner?.category === "Tech Alliance" && (
-                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#FFC46B]/15 text-[#FFC46B] border border-[#FFC46B]/30">Tech Alliance</span>
+                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-amber/15 text-coder-amber border border-coder-amber/30">Tech Alliance</span>
                       )}
                       {hasPitch && (
                         <span role="link"
                           onClick={(e) => { e.stopPropagation(); router.push(`/events/${ev.id}#pitch`); }}
-                          className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#BC7CFF]/10 text-[#BC7CFF]/70 border border-[#BC7CFF]/20 hover:bg-[#BC7CFF]/20 cursor-pointer transition-colors"
+                          className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/10 text-coder-purple/70 border border-coder-purple/20 hover:bg-coder-purple/20 cursor-pointer transition-colors"
                           title="Suggested application ready">
                           ✓ Application ready
                         </span>
@@ -486,7 +486,7 @@ export default function OverviewPage() {
                           onClick={(e) => toggleAttending(e, ev.id, ev.attending)}
                           className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded border transition-colors ${
                             ev.attending
-                              ? "bg-[#01F2FF]/15 text-[#01F2FF] border-[#01F2FF]/30 hover:bg-[#01F2FF]/25"
+                              ? "bg-coder-cyan/15 text-coder-cyan border-coder-cyan/30 hover:bg-coder-cyan/25"
                               : "bg-white/5 text-white/30 border-white/10 hover:text-white/60 hover:border-white/20"
                           }`}
                           title={ev.attending ? "Remove from attending" : "Mark as attending"}
@@ -502,10 +502,10 @@ export default function OverviewPage() {
                       {ev.isOnline && !ev.location && <span>🌐 Online</span>}
                       {ev.partner && <span>🤝 {ev.partner.name}</span>}
                       {ev.ticketCost && (
-                        <span className={/free/i.test(ev.ticketCost) ? "text-[#66FFAB]/70" : "text-[#FFC46B]/80"}>🎟 {truncate(ev.ticketCost, 22)}</span>
+                        <span className={/free/i.test(ev.ticketCost) ? "text-coder-green/70" : "text-coder-amber/80"}>🎟 {truncate(ev.ticketCost, 22)}</span>
                       )}
                       {ev.isPaid === true && (
-                        <span className="text-[#66FFAB]/70">{ev.paidNote ? truncate(ev.paidNote, 22) : "Paid"}</span>
+                        <span className="text-coder-green/70">{ev.paidNote ? truncate(ev.paidNote, 22) : "Paid"}</span>
                       )}
                       {ev.isPaid === false && (
                         <span className="text-white/25">{ev.paidNote ? truncate(ev.paidNote, 22) : "Unpaid"}</span>
@@ -525,7 +525,7 @@ export default function OverviewPage() {
                             const link = ev.applyUrl || (ev.howToApply?.startsWith("http") ? ev.howToApply : null);
                             if (link) window.open(link, "_blank", "noopener"); else router.push(`/events/${ev.id}`);
                           }}
-                          className="text-[#BC7CFF]/70 hover:text-[#BC7CFF] transition-colors cursor-pointer underline underline-offset-2"
+                          className="text-coder-purple/70 hover:text-coder-purple transition-colors cursor-pointer underline underline-offset-2"
                         >
                           → {isAdmin ? "Apply (autofill) ↗" : (ev.applyUrl ? "Apply ↗" : truncate(ev.howToApply, 35))}
                         </span>
@@ -544,7 +544,7 @@ export default function OverviewPage() {
                       </span>
                     )}
                     <div className="font-mono text-[9px] text-white/25 text-right space-y-0.5">
-                      {ev.cfpDeadline && <div><span className="text-[#FF8067]/70">CFP</span> {fmt(ev.cfpDeadline)}</div>}
+                      {ev.cfpDeadline && <div><span className="text-coder-coral/70">CFP</span> {fmt(ev.cfpDeadline)}</div>}
                       {ev.startDate   && <div>{fmt(ev.startDate)}</div>}
                     </div>
                     {categoryTab && (

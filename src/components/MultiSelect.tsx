@@ -41,8 +41,8 @@ export default function MultiSelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#0D1011] border rounded-lg text-sm transition-colors ${
-          selected.length ? "border-[#BC7CFF] text-white" : "border-white/10 text-white/80"
+        className={`flex items-center gap-1.5 px-3 py-1.5 bg-coder-control border rounded-lg text-sm transition-colors ${
+          selected.length ? "border-coder-purple text-white" : "border-white/10 text-white/80"
         }`}
       >
         <span className="whitespace-nowrap">{summary}</span>
@@ -51,7 +51,7 @@ export default function MultiSelect({
         </svg>
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 min-w-[190px] max-h-72 overflow-auto bg-[#0D1011] border border-white/15 rounded-lg p-1 shadow-xl">
+        <div className="absolute z-30 mt-1 min-w-[190px] max-h-72 overflow-auto bg-coder-control border border-white/15 rounded-lg p-1 shadow-xl">
           {selected.length > 0 && (
             <button
               type="button"
@@ -70,7 +70,7 @@ export default function MultiSelect({
                 type="checkbox"
                 checked={selected.includes(opt)}
                 onChange={() => toggle(opt)}
-                className="accent-[#BC7CFF]"
+                className="accent-coder-purple"
               />
               <span className="truncate">{disp(opt)}</span>
             </label>

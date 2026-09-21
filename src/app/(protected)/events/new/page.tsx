@@ -8,7 +8,7 @@ import { EVENT_TYPES, EVENT_STATUSES, REGIONS, CATEGORIES, CATEGORY_LABELS, AUDI
 interface Partner { id: string; name: string; }
 
 const inputCls =
-  "w-full px-3 py-2 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";
+  "w-full px-3 py-2 bg-coder-control border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors";
 const labelCls =
   "block font-mono text-[9px] uppercase tracking-[0.1em] text-white/40 mb-1.5";
 
@@ -81,12 +81,12 @@ export default function NewEventPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <Link href="/" className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/30 hover:text-[#BC7CFF] transition-colors">← Back</Link>
+        <Link href="/" className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/30 hover:text-coder-purple transition-colors">← Back</Link>
         <h1 className="text-xl font-semibold text-white mt-2">New Event</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
           <F label="Title *">{I("title", { required: true, placeholder: "Event name" })}</F>
           <F label="Type *">{S("type", EVENT_TYPES)}</F>
           <F label="Track">
@@ -119,7 +119,7 @@ export default function NewEventPage() {
                   type="checkbox"
                   checked={form[key as keyof typeof form] as boolean}
                   onChange={(e) => set(key, e.target.checked)}
-                  className="w-4 h-4 rounded accent-[#BC7CFF]"
+                  className="w-4 h-4 rounded accent-coder-purple"
                 />
                 <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">{label}</span>
               </label>
@@ -127,7 +127,7 @@ export default function NewEventPage() {
           </div>
         </div>
 
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5">
           <label className={labelCls}>Description</label>
           <textarea
             rows={4}
@@ -138,7 +138,7 @@ export default function NewEventPage() {
           />
         </div>
 
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5">
           <label className={labelCls}>Audience signals</label>
           <div className="flex flex-wrap gap-1.5">
             {AUDIENCE_SIGNALS.map((tag) => {
@@ -150,7 +150,7 @@ export default function NewEventPage() {
                   onClick={() => toggleSignal(tag)}
                   className={`font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded-lg border transition-colors ${
                     on
-                      ? "bg-[#BC7CFF]/20 text-[#BC7CFF] border-[#BC7CFF]/40"
+                      ? "bg-coder-purple/20 text-coder-purple border-coder-purple/40"
                       : "bg-white/5 text-white/40 border-white/10 hover:text-white/70 hover:border-white/20"
                   }`}
                 >
@@ -162,7 +162,7 @@ export default function NewEventPage() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-[#FF8067]/10 border border-[#FF8067]/25 rounded-lg text-[#FF8067] text-sm">
+          <div className="flex items-center gap-2 p-3 bg-coder-coral/10 border border-coder-coral/25 rounded-lg text-coder-coral text-sm">
             <span>✗</span> {error}
           </div>
         )}
@@ -174,7 +174,7 @@ export default function NewEventPage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
+            className="px-6 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
           >
             {saving ? "Creating…" : "Create Event"}
           </button>

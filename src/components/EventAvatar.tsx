@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BRAND } from "@/lib/brand";
 
 export type AvatarSize = 24 | 32 | 40 | 56;
 
@@ -11,11 +12,11 @@ interface EventAvatarProps {
 
 /* ── Brand type colors ── */
 const TYPE_COLORS: Record<string, string> = {
-  CONFERENCE: "#BC7CFF",
-  MEETUP:     "#66FFAB",
-  EVENT:      "#FF8067",
-  PODCAST:    "#F08DFF",
-  WEBINAR:    "#01F2FF",
+  CONFERENCE: BRAND.purple,
+  MEETUP:     BRAND.green,
+  EVENT:      BRAND.coral,
+  PODCAST:    BRAND.pink,
+  WEBINAR:    BRAND.cyan,
 };
 
 const RADIUS: Record<AvatarSize, string> = {
@@ -85,7 +86,7 @@ function TypeIcon({ type, color, size }: { type: string; color: string; size: nu
 
 /* ── Type-gradient fallback tile ── */
 function TypeTile({ type, size }: { type: string; size: AvatarSize }) {
-  const color = TYPE_COLORS[type] ?? "#BC7CFF";
+  const color = TYPE_COLORS[type] ?? BRAND.purple;
   const iconSize = Math.round(size * 0.48);
   return (
     <div
@@ -170,7 +171,7 @@ export default function EventAvatar({ event, size = 40 }: EventAvatarProps) {
 
 /* ── Tiny dot-only variant for calendar pills (no favicon, just type color) ── */
 export function EventTypeDot({ type, sizePx = 7 }: { type: string; sizePx?: number }) {
-  const color = TYPE_COLORS[type] ?? "#BC7CFF";
+  const color = TYPE_COLORS[type] ?? BRAND.purple;
   return (
     <span
       className="rounded-full flex-shrink-0 inline-block"

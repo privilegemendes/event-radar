@@ -17,6 +17,7 @@ import ApplyModal from "@/components/ApplyModal";
 import { useAvailability, AvailabilityChip } from "@/components/Availability";
 import ReadinessCard from "@/components/ReadinessCard";
 import { SPEAKING_CHECKLIST, ATTENDING_CHECKLIST, GIG_STAGES, ATTEND_STAGES } from "@/lib/constants";
+import { BRAND } from "@/lib/brand";
 
 /* ── Types ── */
 interface Partner { id: string; name: string; category: string; }
@@ -44,7 +45,7 @@ interface Event {
 interface SocialLinks { linkedin?: string | null; instagram?: string | null; twitter?: string | null; youtube?: string | null; facebook?: string | null; }
 
 /* ── Helpers ── */
-const inputCls = "w-full px-3 py-2 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";
+const inputCls = "w-full px-3 py-2 bg-coder-control border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors";
 const labelCls = "block font-mono text-[9px] uppercase tracking-[0.1em] text-white/40 mb-1.5";
 
 function toDateInput(d: string | null) { if (!d) return ""; return new Date(d).toISOString().split("T")[0]; }
@@ -95,8 +96,8 @@ const STEP_STATUSES = ["DISCOVERED","APPROVED","PITCHED","ACCEPTED","SPOKEN"];
 function stepStyle(s: string, cur: string) {
   if (cur === "REJECTED") return s === "DISCOVERED" ? "bg-white/5 text-white/40 border border-white/10" : "text-white/20";
   const ci = STATUS_ORDER.indexOf(cur), si = STATUS_ORDER.indexOf(s);
-  if (si < ci) return "bg-[#BC7CFF]/10 text-[#BC7CFF]/60";
-  if (si === ci) return "bg-[#BC7CFF] text-black font-semibold";
+  if (si < ci) return "bg-coder-purple/10 text-coder-purple/60";
+  if (si === ci) return "bg-coder-purple text-black font-semibold";
   return "text-white/25";
 }
 
@@ -252,13 +253,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     <div className="max-w-4xl mx-auto">
 
       {/* ══════════════ EVENT BRIEF ══════════════ */}
-      <div className="bg-[#101314] border border-white/[0.08] rounded-2xl p-5 mb-5">
+      <div className="bg-coder-panel border border-white/[0.08] rounded-2xl p-5 mb-5">
 
         {/* Back + Delete */}
         <div className="flex items-center justify-between mb-4">
-          <Link href="/" className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/30 hover:text-[#BC7CFF] transition-colors">← Back</Link>
+          <Link href="/" className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/30 hover:text-coder-purple transition-colors">← Back</Link>
           {isAdmin && (
-            <button onClick={deleteEvent} className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#FF8067]/50 hover:text-[#FF8067] transition-colors">Delete</button>
+            <button onClick={deleteEvent} className="font-mono text-[9px] uppercase tracking-[0.08em] text-coder-coral/50 hover:text-coder-coral transition-colors">Delete</button>
           )}
         </div>
 
@@ -278,9 +279,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               {rs != null && (
                 <span className={`font-mono text-[9px] font-bold px-1.5 py-0.5 rounded ${scoreColor(rs)}`} title={event.relevancyRationale ?? ""}>{rs}/100</span>
               )}
-              {event.coderRelevant && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30">Coder</span>}
-            {event.isCoderEvent && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#BC7CFF]/20 text-[#BC7CFF] border border-[#BC7CFF]/40 font-semibold">CODER EVENT</span>}
-            {event.partner?.category === "Tech Alliance" && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#FFC46B]/15 text-[#FFC46B] border border-[#FFC46B]/30">Tech Alliance</span>}
+              {event.coderRelevant && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">Coder</span>}
+            {event.isCoderEvent && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/20 text-coder-purple border border-coder-purple/40 font-semibold">CODER EVENT</span>}
+            {event.partner?.category === "Tech Alliance" && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-amber/15 text-coder-amber border border-coder-amber/30">Tech Alliance</span>}
               {lh && LIKELIHOOD_STYLES[lh] && <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${LIKELIHOOD_STYLES[lh]}`}>{lh} likelihood</span>}
             </div>
           </div>
@@ -300,9 +301,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           {isAdmin && avail && avail.status !== "unknown" && (
             <Fact label="My availability">
               {avail.status === "free" ? (
-                <span className="text-[#66FFAB]">Free — no calendar conflicts</span>
+                <span className="text-coder-green">Free — no calendar conflicts</span>
               ) : (
-                <span className="text-[#FF8067]">
+                <span className="text-coder-coral">
                   Conflicts: {avail.conflicts.map((c) => c.summary).join(", ")}
                 </span>
               )}
@@ -311,7 +312,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           {event.industry && <Fact label="Industry">{event.industry}</Fact>}
           {event.cfpDeadline && (
             <Fact label="CFP deadline">
-              <span className={urgentCfp ? "text-[#FF8067] font-semibold" : ""}>
+              <span className={urgentCfp ? "text-coder-coral font-semibold" : ""}>
                 {fmt(event.cfpDeadline)}{urgentCfp ? " — soon!" : ""}
               </span>
             </Fact>
@@ -334,7 +335,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           {event.ticketCost && <Fact label="Ticket cost">{event.ticketCost}</Fact>}
           {event.partner && (
             <Fact label="Partner">
-              <Link href="/partners" className="text-[#BC7CFF] hover:underline">{event.partner.name}</Link>
+              <Link href="/partners" className="text-coder-purple hover:underline">{event.partner.name}</Link>
               <span className="text-white/40"> · {event.partner.category}</span>
             </Fact>
           )}
@@ -355,14 +356,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             )}
             {event.applyUrl && (
               <a href={event.applyUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#BC7CFF] hover:bg-[#CA96FF] text-black font-semibold font-mono text-[10px] uppercase tracking-[0.08em] rounded-lg transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-coder-purple hover:bg-coder-purple-hover text-black font-semibold font-mono text-[10px] uppercase tracking-[0.08em] rounded-lg transition-colors">
                 Apply to speak
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 8L8 2M5 2h3v3"/></svg>
               </a>
             )}
             {event.attendUrl && (
               <a href={event.attendUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#66FFAB] hover:bg-[#85FFBE] text-black font-semibold font-mono text-[10px] uppercase tracking-[0.08em] rounded-lg transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-coder-green hover:bg-coder-green-hover text-black font-semibold font-mono text-[10px] uppercase tracking-[0.08em] rounded-lg transition-colors">
                 Register / attend
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 8L8 2M5 2h3v3"/></svg>
               </a>
@@ -392,7 +393,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           <div className="mb-5">
             <button
               onClick={() => setShowApply(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#BC7CFF] hover:bg-[#CA96FF] text-black font-semibold font-mono text-[10px] uppercase tracking-[0.08em] rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-coder-purple hover:bg-coder-purple-hover text-black font-semibold font-mono text-[10px] uppercase tracking-[0.08em] rounded-lg transition-colors"
             >
               Apply with autofill
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 8L8 2M5 2h3v3"/></svg>
@@ -421,7 +422,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               await fetch(`/api/events/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attending: next }) });
             }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-[9px] uppercase tracking-[0.08em] transition-all ${
-              event.attending ? "bg-[#01F2FF]/15 text-[#01F2FF] border-[#01F2FF]/30 hover:bg-[#01F2FF]/25" : "bg-white/5 text-white/40 border-white/10 hover:text-white/70 hover:border-white/20"
+              event.attending ? "bg-coder-cyan/15 text-coder-cyan border-coder-cyan/30 hover:bg-coder-cyan/25" : "bg-white/5 text-white/40 border-white/10 hover:text-white/70 hover:border-white/20"
             }`}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -445,7 +446,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             event={event}
             checklist={isSpeakingGig ? SPEAKING_CHECKLIST : ATTENDING_CHECKLIST}
             stages={isSpeakingGig ? GIG_STAGES : ATTEND_STAGES}
-            accent={isSpeakingGig ? "#BC7CFF" : "#01F2FF"}
+            accent={isSpeakingGig ? BRAND.purple : BRAND.cyan}
             isAdmin={isAdmin}
             onReadinessChange={(_, next) => setEvent((p) => p ? { ...p, readiness: JSON.stringify(next) } : p)}
             onPrepStageChange={(_, stage) => setEvent((p) => p ? { ...p, prepStage: stage } : p)}
@@ -456,7 +457,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* ══════════════ SUGGESTED APPLICATION ══════════════ */}
       {isAdmin && (
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-4 mb-5">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-4 mb-5">
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40">Suggested Application</p>
@@ -469,20 +470,20 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     {copied ? "Copied!" : "Copy"}
                   </button>
                   {mailtoLink() && (
-                    <a href={mailtoLink()!} className="font-mono text-[9px] uppercase tracking-[0.08em] px-3 py-1.5 bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/25 hover:bg-[#BC7CFF]/25 rounded-lg transition-colors">
+                    <a href={mailtoLink()!} className="font-mono text-[9px] uppercase tracking-[0.08em] px-3 py-1.5 bg-coder-purple/15 text-coder-purple border border-coder-purple/25 hover:bg-coder-purple/25 rounded-lg transition-colors">
                       Open in Mail
                     </a>
                   )}
                 </>
               )}
               <button onClick={generatePitch} disabled={genPitch}
-                className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.08em] px-3 py-1.5 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-bold rounded-lg transition-colors">
+                className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.08em] px-3 py-1.5 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-bold rounded-lg transition-colors">
                 {genPitch ? <><span className="animate-spin w-3 h-3 border border-black/25 border-t-black rounded-full inline-block" />Generating…</> : (event.pitchDraft ? "Regenerate" : "Generate")}
               </button>
             </div>
           </div>
           {event.pitchDraft ? (
-            <textarea rows={10} className="w-full px-3 py-2.5 bg-[#0A0C0D] border border-white/10 rounded-lg text-sm text-white/80 font-mono focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] resize-y transition-colors"
+            <textarea rows={10} className="w-full px-3 py-2.5 bg-coder-sunken border border-white/10 rounded-lg text-sm text-white/80 font-mono focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple resize-y transition-colors"
               value={form.pitchDraft ?? event.pitchDraft}
               onChange={(e) => { set("pitchDraft", e.target.value); setEdited(true); }} />
           ) : (
@@ -505,7 +506,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </button>
 
           {showEdit && (
-            <div className="mt-3 bg-[#101314] border border-white/[0.08] rounded-xl p-5 space-y-5">
+            <div className="mt-3 bg-coder-panel border border-white/[0.08] rounded-xl p-5 space-y-5">
               {/* Status stepper */}
               <div>
                 <p className={labelCls}>Status pipeline</p>
@@ -517,9 +518,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                   ))}
                   <span className="text-white/10 mx-1 font-mono text-xs">|</span>
-                  <button onClick={() => set("status", "REJECTED")} className={`font-mono text-[9px] uppercase tracking-[0.08em] px-3 py-1.5 rounded-lg transition-colors ${(form.status ?? event.status) === "REJECTED" ? "bg-[#FF8067] text-black font-semibold" : "text-[#FF8067]/50 hover:text-[#FF8067] hover:bg-[#FF8067]/10"}`}>Rejected</button>
+                  <button onClick={() => set("status", "REJECTED")} className={`font-mono text-[9px] uppercase tracking-[0.08em] px-3 py-1.5 rounded-lg transition-colors ${(form.status ?? event.status) === "REJECTED" ? "bg-coder-coral text-black font-semibold" : "text-coder-coral/50 hover:text-coder-coral hover:bg-coder-coral/10"}`}>Rejected</button>
                 </div>
-                {edited && <p className="font-mono text-[9px] uppercase tracking-[0.08em] text-[#FF8067]/70 mt-1">Unsaved — click Save</p>}
+                {edited && <p className="font-mono text-[9px] uppercase tracking-[0.08em] text-coder-coral/70 mt-1">Unsaved — click Save</p>}
               </div>
 
               {/* Core fields grid */}
@@ -579,7 +580,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="flex gap-5 items-center pt-1 md:col-span-2">
                   {[{ key: "isOnline", label: "Online" }, { key: "coderRelevant", label: "Coder Relevant" }].map(({ key, label }) => (
                     <label key={key} className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={(form[key as keyof Event] as boolean) ?? false} onChange={(e) => set(key as keyof Event, e.target.checked)} className="w-4 h-4 rounded accent-[#BC7CFF]" />
+                      <input type="checkbox" checked={(form[key as keyof Event] as boolean) ?? false} onChange={(e) => set(key as keyof Event, e.target.checked)} className="w-4 h-4 rounded accent-coder-purple" />
                       <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">{label}</span>
                     </label>
                   ))}
@@ -691,7 +692,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         onClick={() => toggleSignal(tag)}
                         className={`font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded-lg border transition-colors ${
                           on
-                            ? "bg-[#BC7CFF]/20 text-[#BC7CFF] border-[#BC7CFF]/40"
+                            ? "bg-coder-purple/20 text-coder-purple border-coder-purple/40"
                             : "bg-white/5 text-white/40 border-white/10 hover:text-white/70 hover:border-white/20"
                         }`}
                       >
@@ -703,7 +704,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
                 <button onClick={() => { setForm(event); setEdited(false); setShowEdit(false); }} className="px-4 py-2 text-sm text-white/40 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-colors">Cancel</button>
-                <button onClick={save} disabled={saving || !edited} className="px-6 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors">
+                <button onClick={save} disabled={saving || !edited} className="px-6 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors">
                   {saving ? "Saving…" : "Save changes"}
                 </button>
               </div>

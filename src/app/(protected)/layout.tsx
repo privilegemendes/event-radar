@@ -9,7 +9,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const role = session?.role ?? "VIEWER";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#090B0B]">
+    <div className="flex h-screen overflow-hidden bg-coder-bg">
       <Sidebar role={role} />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <TopBar

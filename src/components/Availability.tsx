@@ -65,7 +65,7 @@ export function AvailabilityChip({ result, compact = false }: { result?: Availab
   if (!result || result.status === "unknown") return null;
   if (result.status === "free") {
     return (
-      <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30">
+      <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-green/15 text-coder-green border border-coder-green/30">
         ✓ Free
       </span>
     );
@@ -74,7 +74,7 @@ export function AvailabilityChip({ result, compact = false }: { result?: Availab
   return (
     <span
       title={title}
-      className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#FF8067]/15 text-[#FF8067] border border-[#FF8067]/30"
+      className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-coral/15 text-coder-coral border border-coder-coral/30"
     >
       {compact
         ? "⚠ Busy"

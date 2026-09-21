@@ -24,7 +24,7 @@ interface Event {
 const DAYS   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-const selCls = "px-3 py-1.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white/70 focus:outline-none focus:border-[#BC7CFF] transition-colors";
+const selCls = "px-3 py-1.5 bg-coder-control border border-white/10 rounded-lg text-sm text-white/70 focus:outline-none focus:border-coder-purple transition-colors";
 
 export default function CalendarPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
@@ -159,7 +159,7 @@ export default function CalendarPage() {
       {loading ? (
         <div className="flex items-center justify-center h-60 text-white/30 font-mono text-sm">Loading…</div>
       ) : (
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl overflow-hidden">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl overflow-hidden">
           {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-white/[0.07]">
             {DAYS.map((d) => (
@@ -174,13 +174,13 @@ export default function CalendarPage() {
               return (
                 <div
                   key={idx}
-                  className={`min-h-24 p-1.5 border-r border-b border-white/[0.05] ${idx % 7 === 6 ? "border-r-0" : ""} ${!day ? "bg-[#090B0B]/60" : ""}`}
+                  className={`min-h-24 p-1.5 border-r border-b border-white/[0.05] ${idx % 7 === 6 ? "border-r-0" : ""} ${!day ? "bg-coder-bg/60" : ""}`}
                 >
                   {day && (
                     <>
                       <div className="mb-1 flex justify-start">
                         <span className={`font-mono text-xs w-7 h-7 flex items-center justify-center rounded-full ${
-                          isToday(day) ? "bg-[#BC7CFF] text-black font-bold ring-2 ring-[#BC7CFF]/40" : "text-white/40"
+                          isToday(day) ? "bg-coder-purple text-black font-bold ring-2 ring-coder-purple/40" : "text-white/40"
                         }`}>
                           {day}
                         </span>
@@ -219,7 +219,7 @@ export default function CalendarPage() {
           <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-white/40">{monthCount} event{monthCount === 1 ? "" : "s"} this month</span>
         </div>
         {hasFilter && (
-          <span className="font-mono text-[9px] text-[#BC7CFF]/60 uppercase tracking-[0.08em]">
+          <span className="font-mono text-[9px] text-coder-purple/60 uppercase tracking-[0.08em]">
             {partnerMode === "partner" ? (partnerIdFilter ? `Partner: ${partners.find(p => p.id === partnerIdFilter)?.name ?? "…"}` : "Partner events") : partnerMode === "coder" ? "Coder events" : partnerMode === "techAlliance" ? "Tech Alliance events" : "Community events"}
           </span>
         )}
@@ -234,10 +234,10 @@ export default function CalendarPage() {
           <div className="flex flex-wrap gap-2">
             {datelessEvents.map((ev) => (
               <Link key={ev.id} href={`/events/${ev.id}`}
-                className="flex items-center gap-2 bg-[#101314] border border-white/[0.08] rounded-lg px-3 py-2 hover:bg-[#141718] hover:border-[#BC7CFF]/40 transition-colors">
+                className="flex items-center gap-2 bg-coder-panel border border-white/[0.08] rounded-lg px-3 py-2 hover:bg-coder-panel-alt hover:border-coder-purple/40 transition-colors">
                 <span className={`w-2 h-2 rounded-full ${EVENT_TYPE_DOT[ev.type] ?? "bg-white/30"}`} />
                 <span className="text-xs text-white/80">{ev.title}</span>
-                {ev.partner && <span className="font-mono text-[9px] text-[#01F2FF]/70">{ev.partner.name}</span>}
+                {ev.partner && <span className="font-mono text-[9px] text-coder-cyan/70">{ev.partner.name}</span>}
               </Link>
             ))}
           </div>

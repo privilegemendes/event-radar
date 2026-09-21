@@ -2,29 +2,53 @@
 
 /* ── Coder brand tokens ── */
 :root {
-  --coder-bg:        #090B0B;
-  --coder-panel:     #101314;
-  --coder-panel-alt: #141718;
-  --coder-border:    rgba(255,255,255,0.08);
-  --coder-purple:    #BC7CFF;
-  --coder-green:     #66FFAB;
-  --coder-cyan:      #01F2FF;
-  --coder-coral:     #FF8067;
-  --coder-pink:      #F08DFF;
+  /* Surfaces, darkest to lightest. */
+  --coder-bg:           #090B0B;
+  --coder-sunken:       #0A0C0D;
+  --coder-surface:      #0C0E0F;
+  --coder-control:      #0D1011;
+  --coder-panel:        #101314;
+  --coder-panel-alt:    #141718;
+  --coder-border:       rgba(255,255,255,0.08);
+
+  /* Accents. */
+  --coder-purple:       #BC7CFF;
+  --coder-purple-hover: #CA96FF;
+  --coder-purple-active: #B070F0;
+  --coder-green:        #66FFAB;
+  --coder-green-hover:  #85FFBE;
+  --coder-cyan:         #01F2FF;
+  --coder-coral:        #FF8067;
+  --coder-pink:         #F08DFF;
+  --coder-amber:        #FFC46B;
+  --coder-red:          #FF6B6B;
 }
 
-/* Make brand colors available as Tailwind utilities (bg-brand-purple, etc.) */
+/* Expose every brand color as a Tailwind utility: bg-coder-panel,
+   text-coder-purple, border-coder-purple/30, ring-coder-cyan, and so on.
+   Components should reference these rather than repeating the hex. */
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-coder-bg:     var(--coder-bg);
-  --color-coder-panel:  var(--coder-panel);
-  --color-coder-purple: var(--coder-purple);
-  --color-coder-green:  var(--coder-green);
-  --color-coder-cyan:   var(--coder-cyan);
-  --color-coder-coral:  var(--coder-coral);
-  --color-coder-pink:   var(--coder-pink);
+  --color-coder-bg:           var(--coder-bg);
+  --color-coder-sunken:       var(--coder-sunken);
+  --color-coder-surface:      var(--coder-surface);
+  --color-coder-control:      var(--coder-control);
+  --color-coder-panel:        var(--coder-panel);
+  --color-coder-panel-alt:    var(--coder-panel-alt);
+  --color-coder-border:       var(--coder-border);
+
+  --color-coder-purple:       var(--coder-purple);
+  --color-coder-purple-hover: var(--coder-purple-hover);
+  --color-coder-purple-active: var(--coder-purple-active);
+  --color-coder-green:        var(--coder-green);
+  --color-coder-green-hover:  var(--coder-green-hover);
+  --color-coder-cyan:         var(--coder-cyan);
+  --color-coder-coral:        var(--coder-coral);
+  --color-coder-pink:         var(--coder-pink);
+  --color-coder-amber:        var(--coder-amber);
+  --color-coder-red:          var(--coder-red);
 }
 
 /* ── Reset & base ── */

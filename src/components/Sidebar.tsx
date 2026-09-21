@@ -147,34 +147,34 @@ export default function Sidebar({ role }: SidebarProps) {
             onClick={() => setOpen(false)}
             className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 ${
               active
-                ? "bg-[#BC7CFF]/15 text-[#BC7CFF]"
+                ? "bg-coder-purple/15 text-coder-purple"
                 : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
             }`}
           >
             {/* Left accent bar */}
             <span
-              className={`absolute left-0 w-0.5 h-5 rounded-r transition-opacity duration-150 bg-[#BC7CFF] ${
+              className={`absolute left-0 w-0.5 h-5 rounded-r transition-opacity duration-150 bg-coder-purple ${
                 active ? "opacity-100" : "opacity-0"
               }`}
             />
-            <span className={`flex-shrink-0 transition-colors ${active ? "text-[#BC7CFF]" : ""}`}>
+            <span className={`flex-shrink-0 transition-colors ${active ? "text-coder-purple" : ""}`}>
               <Icon />
             </span>
             <span className="font-mono text-[11px] uppercase tracking-[0.08em] leading-none">
               {label}
             </span>
             {href === "/inbox" && inboxCount > 0 && (
-              <span className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#BC7CFF] text-black font-bold leading-none min-w-[18px] text-center">
+              <span className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-coder-purple text-black font-bold leading-none min-w-[18px] text-center">
                 {inboxCount}
               </span>
             )}
             {href === "/podiums" && gigsCount > 0 && (
-              <span className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#BC7CFF]/20 text-[#BC7CFF] font-bold leading-none min-w-[18px] text-center">
+              <span className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-coder-purple/20 text-coder-purple font-bold leading-none min-w-[18px] text-center">
                 {gigsCount}
               </span>
             )}
             {href === "/coder-events" && coderEventsCount > 0 && (
-              <span className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#BC7CFF]/20 text-[#BC7CFF] font-bold leading-none min-w-[18px] text-center">
+              <span className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-coder-purple/20 text-coder-purple font-bold leading-none min-w-[18px] text-center">
                 {coderEventsCount}
               </span>
             )}
@@ -202,7 +202,7 @@ export default function Sidebar({ role }: SidebarProps) {
       <span
         className={`font-mono text-[9px] uppercase tracking-[0.1em] px-1.5 py-0.5 rounded ${
           role === "ADMIN"
-            ? "bg-[#BC7CFF]/15 text-[#BC7CFF]"
+            ? "bg-coder-purple/15 text-coder-purple"
             : "bg-white/5 text-white/30"
         }`}
       >
@@ -215,7 +215,7 @@ export default function Sidebar({ role }: SidebarProps) {
     <>
       {/* Mobile hamburger */}
       <button
-        className="md:hidden fixed top-3.5 left-3.5 z-50 p-2 bg-[#101314] border border-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
+        className="md:hidden fixed top-3.5 left-3.5 z-50 p-2 bg-coder-panel border border-white/10 rounded-lg text-white/60 hover:text-white transition-colors"
         onClick={() => setOpen(!open)}
         aria-label="Toggle menu"
       >
@@ -234,7 +234,7 @@ export default function Sidebar({ role }: SidebarProps) {
 
       {/* Mobile drawer */}
       <aside
-        className={`md:hidden fixed top-0 left-0 z-50 h-full w-60 bg-[#0C0E0F] border-r border-white/[0.07] transform transition-transform duration-200 ${
+        className={`md:hidden fixed top-0 left-0 z-50 h-full w-60 bg-coder-surface border-r border-white/[0.07] transform transition-transform duration-200 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -248,7 +248,7 @@ export default function Sidebar({ role }: SidebarProps) {
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-56 bg-[#0C0E0F] border-r border-white/[0.07] flex-shrink-0">
+      <aside className="hidden md:flex flex-col w-56 bg-coder-surface border-r border-white/[0.07] flex-shrink-0">
         <SidebarHeader />
         <nav className="relative flex-1 p-3 space-y-0.5 overflow-y-auto">
           <NavLinks />
