@@ -5,6 +5,8 @@ import { getSetting, setSetting } from "@/lib/settings";
 import { deriveCategory } from "@/lib/events";
 import { costBucket } from "@/lib/constants";
 import { isOwner } from "@/lib/owner";
+import { getApplicantProfile } from "@/lib/settings";
+import { buildSpeakerProfile, speakerName } from "@/lib/speaker-brief";
 
 export const maxDuration = 120;
 
@@ -74,7 +76,15 @@ export async function POST() {
   const baseUrl = process.env.ANTHROPIC_BASE_URL, authToken = process.env.ANTHROPIC_AUTH_TOKEN;
   if (!baseUrl || !authToken) return NextResponse.json({ error: "LLM not configured" }, { status: 503 });
 
-  const brief = `You are advising Irmak Eyiceoglu — EMEA Partner Manager at Coder (AI devtools / self-hosted cloud development environments) and a first-time speaker building a track record. Her tracks: SPEAK (realistic personal speaking slots — meetups, podcasts, workshops, small summits, Women-in-AI), PARTICIPATE (Coder-relevant / partner / enterprise / analyst events she attends in her Coder role), ATTEND (personal learning/network).
+  const profile = await getApplicantProfile();
+  const name = speakerName(profile);
+  const hasEmployerAngle = !!(profile.employerAngle ?? "").trim();
+
+  const brief = `You are advising this speaker:
+
+${buildSpeakerProfile(profile, "full")}
+
+Their tracks: SPEAK (realistic personal speaking slots), ${hasEmployerAngle ? "PARTICIPATE (events attended in the employer role — partner, enterprise and analyst events), " : ""}ATTEND (personal learning and network).
 
 Here is the current Event Radar dataset (aggregated):
 Totals: ${JSON.stringify(stats.totals)}
@@ -86,9 +96,9 @@ Cost/access breakdown: ${JSON.stringify(stats.byCost)}
 Top cities: ${JSON.stringify(stats.topCities)}
 Highest-relevancy upcoming events: ${JSON.stringify(stats.topEvents.map(e => ({ t: e.title, city: e.city, score: e.score, action: e.action })))}
 
-Write a sharp, decision-useful EXECUTIVE SUMMARY & RECOMMENDATIONS in GitHub-flavoured Markdown. Be specific and quantitative, reference real event names and cities from the data, and think in terms of "who would be in the room" and "time well invested" for Irmak. Cover, using '## ' section headings:
+Write a sharp, decision-useful EXECUTIVE SUMMARY & RECOMMENDATIONS in GitHub-flavoured Markdown. Be specific and quantitative, reference real event names and cities from the data, and think in terms of "who would be in the room" and "time well invested" for ${name}. Cover, using '## ' section headings:
 ## Strategy in one paragraph
-## Best-hit events (where to actually go)  — a short prioritized list with why (audience + payoff), grouped by SPEAK vs PARTICIPATE
+## Best-hit events (where to actually go)  — a short prioritized list with why (audience + payoff), grouped by track
 ## Regional read — what each region is focused on and how they differ (North America vs Europe vs UK vs Online)
 ## Trends & observations from the data
 ## Recommendations & next actions — concrete, prioritized

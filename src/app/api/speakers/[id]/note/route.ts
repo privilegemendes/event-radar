@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { capNote } from "@/lib/text";
+import { getApplicantProfile } from "@/lib/settings";
+import { buildSpeakerProfile, speakerName } from "@/lib/speaker-brief";
 
 export const maxDuration = 120;
-
-const SPEAKER_PROFILE = `Irmak Eyiceoglu — first-time speaker building a track record. EMEA Partner Manager at Coder (AI devtools). Signature topic: Sovereign AI and practical AI for non-technical founders/entrepreneurs. Confirmed speaker at Nomad Cruise 17 AI Edition (Sept 2026).`;
 
 /* Regenerate a personal, CREATIVE LinkedIn connection note for one speaker.
    It must NOT ask for anything (no advice, no meeting, no opportunity) — just a genuine personal note.
@@ -35,9 +35,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ? "Make it thoughtful and sincere."
       : "Make it warm and genuine.";
 
-    const prompt = `${SPEAKER_PROFILE}
+    const profile = await getApplicantProfile();
+    const speakerBlock = buildSpeakerProfile(profile, "compact");
+    const name = speakerName(profile);
 
-Write ONE personal, CREATIVE LinkedIn connection-request note (STRICTLY under 280 characters) from Irmak to this person:
+    const prompt = `${speakerBlock}
+
+Write ONE personal, CREATIVE LinkedIn connection-request note (STRICTLY under 280 characters) from ${name} to this person:
 - Name: ${speaker.name}
 - Role: ${speaker.title ?? "?"}${speaker.company ? " at " + speaker.company : ""}
 - Background: ${speaker.background ?? "?"}
@@ -45,7 +49,7 @@ Write ONE personal, CREATIVE LinkedIn connection-request note (STRICTLY under 28
 - Seen speaking at: ${events.map((e) => e.title).join(", ") || "an AI event"}
 
 Reference something genuinely specific about them and make it land — memorable and human. ${toneHint}
-CRITICAL: do NOT ask for anything — no advice, no meeting, no call, no opportunity, no favour, no question. It is simply a genuine personal note that makes them want to accept the connection. First person as Irmak. No emojis, no hashtags, not salesy. Return ONLY the note text, nothing else.`;
+CRITICAL: do NOT ask for anything — no advice, no meeting, no call, no opportunity, no favour, no question. It is simply a genuine personal note that makes them want to accept the connection. First person as ${name}. No emojis, no hashtags, not salesy. Return ONLY the note text, nothing else.`;
 
     const response = await fetch(`${baseUrl}/v1/messages`, {
       method: "POST",
