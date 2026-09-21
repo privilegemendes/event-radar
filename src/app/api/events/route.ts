@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
       // `ownerOnly` and `createdAt` stay usable above for filtering and ordering.
       omit: {
         ownerOnly:           true,
-        contact:             true,
         followUpAt:          true,
         acceptanceRationale: true,
         attendUrl:           true,
