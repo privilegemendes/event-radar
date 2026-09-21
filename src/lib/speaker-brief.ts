@@ -1,5 +1,4 @@
-import type { ApplicantProfile, SpeakingLevel } from "./settings";
-import { SPEAKING_LEVELS } from "./settings";
+import { SPEAKING_LEVELS, type ApplicantProfile, type SpeakingLevel } from "./profile-schema";
 
 /**
  * Renders the LLM-facing blocks (speaker profile, scoring rubric, exclusions,

@@ -18,5 +18,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   Also: SQLite must move to hosted Postgres, `maxDuration = 300` needs Vercel Pro,
   connect via `vercel git connect` (coder-internal, no personal accounts). See the
   **Deployment (Vercel)** section in `README.md` for the full checklist.
+- **Prompts are not hardcoded.** Every LLM call renders its speaker profile,
+  scoring rubric, exclusions and search plan from the stored profile via
+  `src/lib/speaker-brief.ts`. Do not reintroduce a literal `SPEAKER_PROFILE`
+  constant — add a profile field instead. The builders are pure and unit-tested
+  (`npm test`); `src/lib/profile-schema.ts` is deliberately free of
+  `server-only` so the settings form and the tests can import it.
 - Data lives in the gitignored `prisma/dev.db`; commit as
   `Irmak Eyiceoglu <irmak@coder.com>`.

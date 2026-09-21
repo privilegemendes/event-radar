@@ -1,4 +1,4 @@
-import { EMPTY_PROFILE, type ApplicantProfile } from "./settings";
+import { EMPTY_PROFILE, type ApplicantProfile } from "./profile-schema";
 import {
   parseList,
   parsePronouns,

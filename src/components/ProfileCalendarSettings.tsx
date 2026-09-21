@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ApplicantProfile } from "@/lib/settings";
-import { SPEAKING_LEVELS, SPEAKING_LEVEL_LABELS, type SpeakingLevel } from "@/lib/settings";
+import { SPEAKING_LEVELS, SPEAKING_LEVEL_LABELS, type ApplicantProfile, type SpeakingLevel } from "@/lib/profile-schema";
 
 const inputCls =
   "w-full px-3 py-2.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";

@@ -9,6 +9,7 @@ Internal tool for **Irmak Eyiceoglu** (Coder EMEA Partner Manager) to discover, 
 - **Calendar availability** — checks a read-only Google Calendar ICS feed to flag whether Irmak is free for an event/webinar
 - **Apply helper** — saved Applicant Profile with one-click copy / prefilled email to speed up CFP applications
 - **Event pipeline** — Track events from DISCOVERED → APPROVED → PITCHED → ACCEPTED → SPOKEN
+- **Configurable speaker brief** — discovery, scoring and pitches are rendered from a stored profile (speaking level, topics, geographies, credentials, employer angle, exclusions) rather than hardcoded, so the app can be pointed at a different speaker from Settings
 - **AI Discovery** — Claude (Anthropic) searches the web for relevant events and podcasts seeking speakers
 - **Pitch generator** — Claude drafts tailored speaker application emails
 - **Partner-scoped discovery** — Find events linked to specific EMEA partners
@@ -24,6 +25,12 @@ npm install
 npx prisma migrate dev --name init
 npx prisma db seed
 npm run dev
+```
+
+Run the tests with:
+
+```bash
+npm test
 ```
 
 ## Default Logins
@@ -46,6 +53,7 @@ The app will display a banner until the default password is changed.
 |----------|-------------|
 | `DATABASE_URL` | SQLite: `file:./prisma/dev.db`. Postgres in prod: `postgresql://...` |
 | `SESSION_SECRET` | 64-char hex secret for JWT signing |
+| `OWNER_EMAIL` | Owner account — sees the Podium and private events. Defaults to `irmak@coder.com`. |
 
 ### Production (set manually)
 
@@ -57,6 +65,34 @@ The app will display a banner until the default password is changed.
 | `ANTHROPIC_AUTH_TOKEN` | Anthropic API authentication token |
 
 > In the Coder workspace, `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` are injected automatically. Do not commit them to `.env`.
+
+## Speaker brief
+
+Every prompt sent to Claude is rendered from the profile stored in
+**Settings → Speaker Brief**, not hardcoded. The fields that change AI behaviour:
+
+| Field | Effect |
+|-------|--------|
+| Speaking level | Selects the scoring rubric. `FIRST_TIME` scores meetups and podcasts highest and mega-conference keynotes lowest; `KEYNOTE` inverts that. |
+| Signature topics | Searched for, and scored against. |
+| Priority locations | Discovery searches each one separately (depth comes from distinct slices). |
+| Speaking credentials | Cited in generated pitch emails. |
+| Employer angle | Enables the PARTICIPATE track and the employer-framed pitch. Blank = always pitch as an independent speaker. |
+| Excluded event types | Dropped from discovery entirely. Blank = nothing excluded. |
+| Private-event keywords | Matching events are visible only to the owner. |
+| Rubric override | Replaces the generated rubric wholesale. |
+
+The builders live in `src/lib/speaker-brief.ts` and are pure functions covered by
+`src/lib/speaker-brief.test.ts`.
+
+> **Upgrading an existing deployment:** the profile row predates these fields, so
+> back-fill them with the values that used to be hardcoded before the next
+> discovery run — otherwise it goes out with an empty brief:
+>
+> ```bash
+> npx tsx scripts/backfill-speaker-brief.ts          # dry run
+> npx tsx scripts/backfill-speaker-brief.ts --write  # apply
+> ```
 
 ## Discovery
 
