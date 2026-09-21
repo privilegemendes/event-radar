@@ -39,6 +39,19 @@ export async function GET(request: NextRequest) {
 
     const events = await db.event.findMany({
       where,
+      // Trim fields no list view renders — this endpoint returns every event, so
+      // they are pure transfer cost. The detail route still returns the full row.
+      // `ownerOnly` and `createdAt` stay usable above for filtering and ordering.
+      omit: {
+        ownerOnly:           true,
+        contact:             true,
+        followUpAt:          true,
+        acceptanceRationale: true,
+        attendUrl:           true,
+        socialLinks:         true,
+        createdAt:           true,
+        updatedAt:           true,
+      },
       include: { partner: { select: { id: true, name: true, region: true, category: true } } },
       orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { cfpDeadline: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
     });
