@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession } from "@/lib/session";
+import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { getApplicantProfile } from "@/lib/settings";
 import { buildSpeakerProfile, buildScoringRubric } from "@/lib/speaker-brief";
 
@@ -23,10 +23,7 @@ type AnalysisResult = {
 
 export async function POST() {
   try {
-    const session = await requireSession();
-    if (session.role !== "ADMIN")
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
+    await requireAdmin();
     // Find events needing enrichment (missing score, industry, or applyUrl)
     const events = await db.event.findMany({
       where: {
@@ -198,8 +195,8 @@ CRITICAL: Only include URLs you actually found via web search. Return null for a
     });
 
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated")
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error("Analyze error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

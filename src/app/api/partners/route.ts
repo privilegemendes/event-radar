@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession } from "@/lib/session";
+import { requireAdmin, authErrorResponse } from "@/lib/session";
 
 export async function GET() {
   try {
@@ -11,19 +11,15 @@ export async function GET() {
     });
     return NextResponse.json(partners);
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSession();
-    if (session.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requireAdmin();
 
     const body = await request.json();
     const partner = await db.partner.create({
@@ -42,9 +38,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(partner, { status: 201 });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/session";
+import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { getCalendarIcsUrl } from "@/lib/settings";
 import { parseIcsBusy, checkAvailability, type BusyInterval } from "@/lib/ics";
 
@@ -23,11 +23,6 @@ async function loadBusy(url: string): Promise<BusyInterval[]> {
   return busy;
 }
 
-async function requireAdmin() {
-  const session = await requireSession();
-  if (session.role !== "ADMIN") throw new Error("Forbidden");
-}
-
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
@@ -45,12 +40,8 @@ export async function GET(request: NextRequest) {
     const result = checkAvailability(busy, isNaN(start) ? null : start, end && !isNaN(end) ? end : null);
     return NextResponse.json({ configured: true, ...result });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-    if (err instanceof Error && err.message === "Forbidden") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error(err);
     return NextResponse.json({ configured: true, status: "unknown", conflicts: [], error: "calendar_unavailable" });
   }
@@ -81,12 +72,8 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ configured: true, results });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-    if (err instanceof Error && err.message === "Forbidden") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error(err);
     return NextResponse.json({ configured: true, results: {}, error: "calendar_unavailable" });
   }

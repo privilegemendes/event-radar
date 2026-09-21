@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession, requireSession } from "@/lib/session";
+import { getSession, requireSession, authErrorResponse } from "@/lib/session";
 import { createSessionToken } from "@/lib/jwt";
 import bcrypt from "bcryptjs";
 
@@ -56,9 +56,8 @@ export async function POST(request: NextRequest) {
     });
     return response;
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error("Change password error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { getSession, authErrorResponse } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
 
 /**
@@ -30,9 +30,8 @@ export async function GET() {
 
     return NextResponse.json({ inbox, gigs, coderEvents });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

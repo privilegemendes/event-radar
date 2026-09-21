@@ -56,7 +56,7 @@ export default function PartnersPage() {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    fetch("/api/users").then((r) => { if (r.ok) setIsAdmin(true); }).catch(() => {});
+    fetch("/api/auth/me").then((r) => r.json()).then((d: { role?: string }) => setIsAdmin(d?.role === "ADMIN")).catch(() => setIsAdmin(false));
     fetch("/api/partners")
       .then((r) => r.json())
       .then((d: Partner[]) => setPartners(Array.isArray(d) ? d : []))

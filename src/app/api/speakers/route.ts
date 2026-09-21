@@ -9,8 +9,8 @@ export async function GET() {
     });
     return NextResponse.json(speakers);
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated")
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    // Fully public read — no session call here, so no auth error is possible.
+    console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

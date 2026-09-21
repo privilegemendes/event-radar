@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession, getSession } from "@/lib/session";
+import { requireAdmin, getSession, authErrorResponse } from "@/lib/session";
 import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { isOwner } from "@/lib/owner";
@@ -117,9 +117,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(events);
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -127,10 +126,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSession();
-    if (session.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requireAdmin();
 
     const body = await request.json();
     const event = await db.event.create({
@@ -176,9 +172,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(event, { status: 201 });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

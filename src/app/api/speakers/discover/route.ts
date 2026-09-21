@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession } from "@/lib/session";
+import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { capNote } from "@/lib/text";
 import { getApplicantProfile } from "@/lib/settings";
 import { buildSpeakerProfile, speakerName, parseList } from "@/lib/speaker-brief";
@@ -55,10 +55,7 @@ type RawSpeaker = {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireSession();
-    if (session.role !== "ADMIN")
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
+    await requireAdmin();
     const body = await request.json().catch(() => ({})) as { eventIds?: string[] };
     const today = new Date();
     const todayStart = new Date(today.toDateString());
@@ -210,8 +207,8 @@ Only include real people you found via search. Do not invent names or LinkedIn U
 
     return NextResponse.json({ ok: true, created, updated, candidates: speakers.length, eventsMined: events.length });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated")
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error("Speaker discovery error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

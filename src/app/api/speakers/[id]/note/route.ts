@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession } from "@/lib/session";
+import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { capNote } from "@/lib/text";
 import { getApplicantProfile } from "@/lib/settings";
 import { buildSpeakerProfile, speakerName } from "@/lib/speaker-brief";
@@ -12,10 +12,7 @@ export const maxDuration = 120;
    body.tone (optional): "warm" | "witty" | "thoughtful" — varies the style. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await requireSession();
-    if (session.role !== "ADMIN")
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
+    await requireAdmin();
     const { id } = await params;
     const body = await request.json().catch(() => ({})) as { tone?: string };
     const tone = ["warm", "witty", "thoughtful"].includes(body.tone ?? "") ? body.tone! : "warm";
@@ -78,8 +75,8 @@ CRITICAL: do NOT ask for anything — no advice, no meeting, no call, no opportu
     const updated = await db.speaker.update({ where: { id }, data: { outreachNote: note } });
     return NextResponse.json({ ok: true, outreachNote: updated.outreachNote });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated")
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
