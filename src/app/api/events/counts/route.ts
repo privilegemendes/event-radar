@@ -1,0 +1,38 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
+import { isOwner } from "@/lib/owner";
+
+/**
+ * Badge counts for the sidebar.
+ *
+ * The sidebar renders three integers on every page and re-reads them on every
+ * navigation. It used to fetch the full event list three times and call .length,
+ * which cost ~1.8 MB per page view; these are the same predicates as COUNTs.
+ */
+export async function GET() {
+  try {
+    // Public read. Same visibility rule as GET /api/events: owner-only events
+    // are hidden from everyone except the owner.
+    const visible = isOwner(await getSession()) ? {} : { ownerOnly: false };
+
+    const [inbox, gigs, coderEvents] = await Promise.all([
+      // Inbox badge: events awaiting review.
+      db.event.count({ where: { ...visible, status: "DISCOVERED" } }),
+      // Podium badge: accepted speaking gigs plus anything marked as attending.
+      db.event.count({ where: { ...visible, OR: [{ status: "ACCEPTED" }, { attending: true }] } }),
+      // Coder Events badge: EMEA events from Coder's own schedule.
+      db.event.count({
+        where: { ...visible, isCoderEvent: true, region: { in: ["Amsterdam/NL", "Rest of Europe"] } },
+      }),
+    ]);
+
+    return NextResponse.json({ inbox, gigs, coderEvents });
+  } catch (err) {
+    if (err instanceof Error && err.message === "Not authenticated") {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    console.error(err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
