@@ -197,7 +197,7 @@ export default function ProfileCalendarSettings() {
       </div>
 
       {/* Speaker Brief — drives discovery, scoring and pitches */}
-      <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 mb-4">
+      <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 mb-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40 mb-1">Speaker Brief</p>
         <p className="text-sm text-white/50 mb-4">
           Steers AI discovery, scoring and pitch drafting. Changes apply to the next discovery run.
@@ -241,7 +241,7 @@ export default function ProfileCalendarSettings() {
             <button
               onClick={saveProfile}
               disabled={savingProfile}
-              className="px-4 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
+              className="px-4 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
             >
               {savingProfile ? "Saving…" : profileSaved ? "Saved ✓" : "Save brief"}
             </button>
