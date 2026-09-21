@@ -125,10 +125,10 @@ export default function InboxPage() {
             <button
               onClick={runAnalysis}
               disabled={analyzing || running}
-              className="flex items-center gap-2 px-3 py-2 border border-[#01F2FF]/30 text-[#01F2FF]/80 hover:text-[#01F2FF] hover:border-[#01F2FF]/60 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-all disabled:opacity-40"
+              className="flex items-center gap-2 px-3 py-2 border border-coder-cyan/30 text-coder-cyan/80 hover:text-coder-cyan hover:border-coder-cyan/60 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-all disabled:opacity-40"
             >
               {analyzing ? (
-                <><span className="animate-spin w-3 h-3 border border-[#01F2FF]/30 border-t-[#01F2FF] rounded-full inline-block" />Analyzing…</>
+                <><span className="animate-spin w-3 h-3 border border-coder-cyan/30 border-t-coder-cyan rounded-full inline-block" />Analyzing…</>
               ) : (
                 <>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -143,7 +143,7 @@ export default function InboxPage() {
             <button
               onClick={runDiscovery}
               disabled={running || analyzing}
-              className="flex items-center gap-2 px-4 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors"
             >
               {running ? (
                 <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-black/25 border-t-black rounded-full" /><span className="font-mono text-[10px] uppercase tracking-[0.08em]">Running…</span></>
@@ -157,7 +157,7 @@ export default function InboxPage() {
 
       {/* Analyze result */}
       {analyzeMsg && (
-        <div className={`mb-4 p-3 rounded-xl border text-sm flex items-center gap-2 ${analyzeMsg.startsWith("Error") ? "bg-[#FF8067]/5 border-[#FF8067]/20 text-[#FF8067]" : "bg-[#01F2FF]/5 border-[#01F2FF]/20 text-[#01F2FF]"}`}>
+        <div className={`mb-4 p-3 rounded-xl border text-sm flex items-center gap-2 ${analyzeMsg.startsWith("Error") ? "bg-coder-coral/5 border-coder-coral/20 text-coder-coral" : "bg-coder-cyan/5 border-coder-cyan/20 text-coder-cyan"}`}>
           <span>{analyzeMsg.startsWith("Error") ? "✗" : "✓"}</span>
           <span className="font-mono text-[10px]">{analyzeMsg}</span>
           <button onClick={() => setAnalyzeMsg(null)} className="ml-auto opacity-50 hover:opacity-100 font-mono text-xs">✕</button>
@@ -167,9 +167,9 @@ export default function InboxPage() {
       {/* Last run info */}
       {lastRun && (
         <div className={`mb-5 p-3.5 rounded-xl border text-sm flex items-start gap-3 ${
-          lastRun.status === "DONE" ? "bg-[#66FFAB]/5 border-[#66FFAB]/20 text-[#66FFAB]"
-          : lastRun.status === "ERROR" ? "bg-[#FF8067]/5 border-[#FF8067]/20 text-[#FF8067]"
-          : "bg-[#01F2FF]/5 border-[#01F2FF]/20 text-[#01F2FF]"
+          lastRun.status === "DONE" ? "bg-coder-green/5 border-coder-green/20 text-coder-green"
+          : lastRun.status === "ERROR" ? "bg-coder-coral/5 border-coder-coral/20 text-coder-coral"
+          : "bg-coder-cyan/5 border-coder-cyan/20 text-coder-cyan"
         }`}>
           <span className="text-base flex-shrink-0">{lastRun.status === "DONE" ? "✓" : lastRun.status === "ERROR" ? "✗" : "⟳"}</span>
           <div className="flex-1 min-w-0">
@@ -219,11 +219,11 @@ export default function InboxPage() {
             {partnerRegionFilter ? `No ${partnerRegionFilter} partner events in inbox` : "Inbox empty — all events reviewed"}
           </p>
           {partnerRegionFilter ? (
-            <button onClick={() => setPartnerRegionFilter("")} className="mt-4 font-mono text-[10px] text-[#BC7CFF]/60 hover:text-[#BC7CFF] uppercase tracking-widest transition-colors">
+            <button onClick={() => setPartnerRegionFilter("")} className="mt-4 font-mono text-[10px] text-coder-purple/60 hover:text-coder-purple uppercase tracking-widest transition-colors">
               Clear filter
             </button>
           ) : isAdmin && (
-            <button onClick={runDiscovery} className="mt-4 font-mono text-[10px] text-[#BC7CFF]/60 hover:text-[#BC7CFF] uppercase tracking-widest transition-colors">
+            <button onClick={runDiscovery} className="mt-4 font-mono text-[10px] text-coder-purple/60 hover:text-coder-purple uppercase tracking-widest transition-colors">
               Run discovery
             </button>
           )}
@@ -231,7 +231,7 @@ export default function InboxPage() {
       ) : (
         <div className="space-y-2">
           {shown.map((ev) => (
-            <div key={ev.id} className="bg-[#101314] border border-white/[0.07] rounded-xl p-4">
+            <div key={ev.id} className="bg-coder-panel border border-white/[0.07] rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <EventAvatar event={ev} size={40} />
                 <div className="flex-1 min-w-0">
@@ -244,7 +244,7 @@ export default function InboxPage() {
                       </span>
                     )}
                     {ev.industry && (
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#BC7CFF]/10 text-[#BC7CFF]/70 border border-[#BC7CFF]/20">{ev.industry}</span>
+                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-coder-purple/10 text-coder-purple/70 border border-coder-purple/20">{ev.industry}</span>
                     )}
                     {ev.relevancyScore != null && (
                       <span className={`font-mono text-[9px] uppercase tracking-[0.06em] px-1.5 py-0.5 rounded font-bold ${scoreColor(ev.relevancyScore)}`} title={ev.relevancyRationale ?? ""}>
@@ -252,7 +252,7 @@ export default function InboxPage() {
                       </span>
                     )}
                     {ev.coderRelevant && (
-                      <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30">Coder</span>
+                      <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">Coder</span>
                     )}
                     {ev.region && <span className="font-mono text-[9px] text-white/30">{ev.region}</span>}
                   </div>
@@ -268,7 +268,7 @@ export default function InboxPage() {
                   <div className="flex flex-wrap gap-3 mt-1 font-mono text-[10px] text-white/30">
                     {ev.location && <span>📍 {ev.location}</span>}
                     {ev.isOnline && !ev.location && <span>🌐 Online</span>}
-                    {ev.cfpDeadline && <span className="text-[#FF8067]">CFP: {fmt(ev.cfpDeadline)}</span>}
+                    {ev.cfpDeadline && <span className="text-coder-coral">CFP: {fmt(ev.cfpDeadline)}</span>}
                     {ev.startDate && <span>{fmt(ev.startDate)}</span>}
                     {ev.partner && <span>🤝 {ev.partner.name}{ev.partner.region ? ` · ${ev.partner.region}` : ""}</span>}
                   </div>
@@ -282,8 +282,8 @@ export default function InboxPage() {
                 </div>
                 {canReview && (
                   <div className="flex flex-col gap-1.5 flex-shrink-0">
-                    <button onClick={() => updateStatus(ev.id, "APPROVED")} className="px-3 py-1.5 bg-[#66FFAB]/10 hover:bg-[#66FFAB]/20 text-[#66FFAB] border border-[#66FFAB]/25 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-colors">Approve</button>
-                    <button onClick={() => updateStatus(ev.id, "REJECTED")} className="px-3 py-1.5 bg-[#FF8067]/10 hover:bg-[#FF8067]/20 text-[#FF8067] border border-[#FF8067]/25 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-colors">Reject</button>
+                    <button onClick={() => updateStatus(ev.id, "APPROVED")} className="px-3 py-1.5 bg-coder-green/10 hover:bg-coder-green/20 text-coder-green border border-coder-green/25 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-colors">Approve</button>
+                    <button onClick={() => updateStatus(ev.id, "REJECTED")} className="px-3 py-1.5 bg-coder-coral/10 hover:bg-coder-coral/20 text-coder-coral border border-coder-coral/25 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-colors">Reject</button>
                   </div>
                 )}
               </div>

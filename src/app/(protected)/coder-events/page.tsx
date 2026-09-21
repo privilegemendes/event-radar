@@ -100,10 +100,10 @@ export default function CoderEventsPage() {
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <span className="font-mono text-2xl font-bold text-[#BC7CFF]">{events.length}</span>
+            <span className="font-mono text-2xl font-bold text-coder-purple">{events.length}</span>
             <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-white/30">Total events</span>
             {emeaCount > 0 && (
-              <span className="font-mono text-[9px] text-[#BC7CFF]/70">
+              <span className="font-mono text-[9px] text-coder-purple/70">
                 {emeaCount} EMEA (you can join)
               </span>
             )}
@@ -111,9 +111,9 @@ export default function CoderEventsPage() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-4 p-3 bg-[#BC7CFF]/5 border border-[#BC7CFF]/15 rounded-xl">
+        <div className="flex items-center gap-4 mt-4 p-3 bg-coder-purple/5 border border-coder-purple/15 rounded-xl">
           <div className="flex items-center gap-2">
-            <div className="w-0.5 h-6 bg-[#BC7CFF] rounded-full flex-shrink-0" />
+            <div className="w-0.5 h-6 bg-coder-purple rounded-full flex-shrink-0" />
             <span className="font-mono text-[9px] text-white/50">
               Purple border = EMEA event (Europe or UK) — you can realistically join or speak
             </span>
@@ -150,9 +150,9 @@ export default function CoderEventsPage() {
                       tabIndex={0}
                       onClick={() => router.push(`/events/${ev.id}`)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/events/${ev.id}`); }}
-                      className={`group flex items-center gap-3 bg-[#101314] hover:bg-[#141718] border rounded-xl px-4 py-3 transition-all duration-150 cursor-pointer ${
+                      className={`group flex items-center gap-3 bg-coder-panel hover:bg-coder-panel-alt border rounded-xl px-4 py-3 transition-all duration-150 cursor-pointer ${
                         isEMEA
-                          ? "border-l-[3px] border-l-[#BC7CFF]/60 border-r-white/[0.07] border-y-white/[0.07] hover:border-l-[#BC7CFF]"
+                          ? "border-l-[3px] border-l-coder-purple/60 border-r-white/[0.07] border-y-white/[0.07] hover:border-l-coder-purple"
                           : "border-white/[0.07] hover:border-white/[0.12]"
                       }`}
                     >
@@ -170,11 +170,11 @@ export default function CoderEventsPage() {
                               {ACTION_LABELS[ev.suggestedAction] ?? ev.suggestedAction}
                             </span>
                           )}
-                          <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30">
+                          <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">
                             CODER
                           </span>
                           {ev.region && (
-                            <span className={`font-mono text-[9px] ${isEMEA ? "text-[#BC7CFF]/60" : "text-white/30"}`}>
+                            <span className={`font-mono text-[9px] ${isEMEA ? "text-coder-purple/60" : "text-white/30"}`}>
                               {ev.region}
                             </span>
                           )}

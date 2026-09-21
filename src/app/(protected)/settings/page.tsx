@@ -9,7 +9,7 @@ interface User {
 }
 
 const inputCls =
-  "w-full px-3 py-2.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";
+  "w-full px-3 py-2.5 bg-coder-control border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors";
 const labelCls =
   "block font-mono text-[9px] uppercase tracking-[0.1em] text-white/40 mb-1.5";
 
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Password section */}
-      <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 mb-4">
+      <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 mb-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40 mb-1">Password</p>
         <p className="text-sm text-white/50 mb-4">Keep your account secure with a strong, unique password.</p>
         <a
@@ -73,19 +73,19 @@ export default function SettingsPage() {
 
       {/* Users (admin only) */}
       {!loading && isAdmin && (
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5">
           <div className="flex items-center justify-between mb-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40">Users</p>
             <button
               onClick={() => setShowAdd(!showAdd)}
-              className="px-3 py-1.5 bg-[#BC7CFF] hover:bg-[#CA96FF] text-black font-mono text-[9px] uppercase tracking-[0.08em] font-bold rounded-lg transition-colors"
+              className="px-3 py-1.5 bg-coder-purple hover:bg-coder-purple-hover text-black font-mono text-[9px] uppercase tracking-[0.08em] font-bold rounded-lg transition-colors"
             >
               {showAdd ? "Cancel" : "+ Add user"}
             </button>
           </div>
 
           {showAdd && (
-            <form onSubmit={addUser} className="mb-5 p-4 bg-[#0A0C0D] border border-white/[0.07] rounded-xl space-y-3">
+            <form onSubmit={addUser} className="mb-5 p-4 bg-coder-sunken border border-white/[0.07] rounded-xl space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className={labelCls}>Email</label>
@@ -107,8 +107,8 @@ export default function SettingsPage() {
                   </select>
                 </div>
               </div>
-              {addError && <p className="font-mono text-[10px] text-[#FF8067]">{addError}</p>}
-              <button type="submit" disabled={adding} className="w-full py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors">
+              {addError && <p className="font-mono text-[10px] text-coder-coral">{addError}</p>}
+              <button type="submit" disabled={adding} className="w-full py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors">
                 {adding ? "Creating…" : "Create user"}
               </button>
               <p className="font-mono text-[9px] text-white/20 text-center">New users are prompted to change their password on first login.</p>
@@ -129,14 +129,14 @@ export default function SettingsPage() {
                   <td className="py-2.5 text-white/80">
                     {u.name}
                     {u.mustChangePassword && (
-                      <span className="ml-2 font-mono text-[8px] text-[#FF8067]/70">⚠ pw change needed</span>
+                      <span className="ml-2 font-mono text-[8px] text-coder-coral/70">⚠ pw change needed</span>
                     )}
                   </td>
                   <td className="py-2.5 font-mono text-[10px] text-white/40">{u.email}</td>
                   <td className="py-2.5">
                     <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${
                       u.role === "ADMIN"
-                        ? "bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/25"
+                        ? "bg-coder-purple/15 text-coder-purple border border-coder-purple/25"
                         : "bg-white/5 text-white/40 border border-white/10"
                     }`}>
                       {u.role}
@@ -151,7 +151,7 @@ export default function SettingsPage() {
       )}
 
       {!loading && !isAdmin && (
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 text-white/40 text-sm">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 text-white/40 text-sm">
           Contact an admin to manage users.
         </div>
       )}

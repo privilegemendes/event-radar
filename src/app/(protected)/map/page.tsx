@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { BRAND } from "@/lib/brand";
 
 interface Ev { id: string; region: string | null; location: string | null; isOnline: boolean; status: string; }
 type Feature = { geometry: { type: string; coordinates: number[][][] | number[][][][] } };
@@ -115,11 +116,11 @@ export default function MapPage() {
       {/* Summary chips */}
       <div className="flex flex-wrap gap-2 mb-4">
         {[
-          { label: "On map", value: total - online - unmapped, color: "#01F2FF" },
-          { label: "Online / Global", value: online, color: "#66FFAB" },
-          { label: "Location TBD", value: unmapped, color: "#BC7CFF" },
+          { label: "On map", value: total - online - unmapped, color: BRAND.cyan },
+          { label: "Online / Global", value: online, color: BRAND.green },
+          { label: "Location TBD", value: unmapped, color: BRAND.purple },
         ].map((c) => (
-          <div key={c.label} className="bg-[#101314] border border-white/[0.08] rounded-lg px-3 py-2">
+          <div key={c.label} className="bg-coder-panel border border-white/[0.08] rounded-lg px-3 py-2">
             <span className="font-mono text-lg font-bold" style={{ color: c.color }}>{c.value}</span>
             <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-white/30 ml-2">{c.label}</span>
           </div>
@@ -131,9 +132,9 @@ export default function MapPage() {
       ) : (
         <div className="grid lg:grid-cols-[1fr_220px] gap-4">
           {/* Map */}
-          <div className="bg-[#0C0E0F] border border-white/[0.08] rounded-xl p-2 overflow-hidden">
+          <div className="bg-coder-surface border border-white/[0.08] rounded-xl p-2 overflow-hidden">
             <svg viewBox="0 15 360 140" className="w-full h-auto" style={{ display: "block" }}>
-              <rect x="0" y="15" width="360" height="140" fill="#0A0C0D" />
+              <rect x="0" y="15" width="360" height="140" fill={BRAND.sunken} />
               {geo?.features.map((f, i) => (
                 <path key={i} d={geomToPath(f.geometry)} fill="#171B1C" stroke="#242829" strokeWidth={0.2} />
               ))}
@@ -143,8 +144,8 @@ export default function MapPage() {
                 return (
                   <g key={b.label} onMouseEnter={() => setHover(b.label)} onMouseLeave={() => setHover(null)} style={{ cursor: "default" }}>
                     <circle cx={px(b.lng)} cy={py(b.lat)} r={Math.min(r, 11)}
-                      fill={active ? "#01F2FF" : "#BC7CFF"} fillOpacity={active ? 0.9 : 0.35}
-                      stroke={active ? "#01F2FF" : "#BC7CFF"} strokeWidth={0.4} />
+                      fill={active ? BRAND.cyan : BRAND.purple} fillOpacity={active ? 0.9 : 0.35}
+                      stroke={active ? BRAND.cyan : BRAND.purple} strokeWidth={0.4} />
                     <text x={px(b.lng)} y={py(b.lat)} textAnchor="middle" dominantBaseline="central"
                       fontSize={Math.max(3.2, Math.min(5.5, r * 0.85))} fontWeight="700"
                       fill="#ffffff" style={{ pointerEvents: "none", fontFamily: "monospace" }}>{b.count}</text>
@@ -161,21 +162,21 @@ export default function MapPage() {
           </div>
 
           {/* Ranked list */}
-          <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-3">
+          <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-3">
             <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-white/30 mb-2">By location</p>
             <div className="space-y-1 max-h-[420px] overflow-y-auto pr-1">
               {bubbles.map((b) => (
                 <div key={b.label}
                   onMouseEnter={() => setHover(b.label)} onMouseLeave={() => setHover(null)}
-                  className={`flex items-center justify-between rounded px-2 py-1 ${hover === b.label ? "bg-[#01F2FF]/10" : ""}`}>
+                  className={`flex items-center justify-between rounded px-2 py-1 ${hover === b.label ? "bg-coder-cyan/10" : ""}`}>
                   <span className="font-mono text-[11px] text-white/60 truncate">{b.label}</span>
-                  <span className="font-mono text-[11px] font-bold text-[#BC7CFF] ml-2">{b.count}</span>
+                  <span className="font-mono text-[11px] font-bold text-coder-purple ml-2">{b.count}</span>
                 </div>
               ))}
               {online > 0 && (
                 <div className="flex items-center justify-between rounded px-2 py-1 border-t border-white/5 mt-1 pt-1.5">
                   <span className="font-mono text-[11px] text-white/40">Online / Global</span>
-                  <span className="font-mono text-[11px] font-bold text-[#66FFAB] ml-2">{online}</span>
+                  <span className="font-mono text-[11px] font-bold text-coder-green ml-2">{online}</span>
                 </div>
               )}
             </div>

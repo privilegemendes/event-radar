@@ -104,7 +104,7 @@ export default function SpeakersPage() {
           <button
             onClick={discover}
             disabled={discovering}
-            className="px-4 py-1.5 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+            className="px-4 py-1.5 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
           >
             {discovering && <span className="w-3 h-3 border-2 border-black/40 border-t-black rounded-full animate-spin" />}
             {discovering ? "Searching…" : "Find speakers"}
@@ -113,7 +113,7 @@ export default function SpeakersPage() {
       </div>
 
       {msg && (
-        <div className="mb-4 font-mono text-[11px] text-[#66FFAB] bg-[#66FFAB]/5 border border-[#66FFAB]/20 rounded-lg px-3 py-2">{msg}</div>
+        <div className="mb-4 font-mono text-[11px] text-coder-green bg-coder-green/5 border border-coder-green/20 rounded-lg px-3 py-2">{msg}</div>
       )}
 
       {loading ? (
@@ -132,7 +132,7 @@ export default function SpeakersPage() {
             const topics = (s.topics ?? "").split(",").map((t) => t.trim()).filter(Boolean).slice(0, 5);
             const rankColor = RANK_COLORS[i] ?? "rgba(255,255,255,0.25)";
             return (
-              <div key={s.id} className="bg-[#101314] border border-white/[0.07] rounded-xl p-4">
+              <div key={s.id} className="bg-coder-panel border border-white/[0.07] rounded-xl p-4">
                 <div className="flex items-start gap-3.5">
                   {/* Rank + avatar */}
                   <div className="flex flex-col items-center gap-1 flex-shrink-0 w-11">
@@ -146,7 +146,7 @@ export default function SpeakersPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 flex-wrap">
                       <h3 className="font-medium text-white/90 text-sm leading-snug">{s.name}</h3>
-                      <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#01F2FF]/10 text-[#01F2FF] border border-[#01F2FF]/20">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-cyan/10 text-coder-cyan border border-coder-cyan/20">
                         🎤 {s.talkCount} {s.talkCount === 1 ? "talk" : "talks"}
                       </span>
                       {s.region && <span className="font-mono text-[9px] text-white/30">{s.region}</span>}
@@ -161,7 +161,7 @@ export default function SpeakersPage() {
                     {topics.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {topics.map((t) => (
-                          <span key={t} className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#BC7CFF]/10 text-[#BC7CFF]/70 border border-[#BC7CFF]/20">{t}</span>
+                          <span key={t} className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-coder-purple/10 text-coder-purple/70 border border-coder-purple/20">{t}</span>
                         ))}
                       </div>
                     )}
@@ -181,7 +181,7 @@ export default function SpeakersPage() {
                         {s.linkedinUrl ? "LinkedIn profile" : "LinkedIn search"} ↗
                       </a>
                       <a href={salesNavLink(s)} target="_blank" rel="noopener noreferrer"
-                        className="font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded bg-[#01F2FF]/10 text-[#01F2FF] border border-[#01F2FF]/25 hover:bg-[#01F2FF]/20 transition-colors">
+                        className="font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded bg-coder-cyan/10 text-coder-cyan border border-coder-cyan/25 hover:bg-coder-cyan/20 transition-colors">
                         Sales Navigator ↗
                       </a>
                       <button
@@ -192,29 +192,29 @@ export default function SpeakersPage() {
                       </button>
                       {isAdmin && (
                         <button onClick={() => del(s.id)}
-                          className="ml-auto font-mono text-[10px] uppercase tracking-[0.06em] px-2 py-1 rounded text-white/25 border border-white/10 hover:text-[#FF6B6B] hover:border-[#FF6B6B]/30 transition-colors">
+                          className="ml-auto font-mono text-[10px] uppercase tracking-[0.06em] px-2 py-1 rounded text-white/25 border border-white/10 hover:text-coder-red hover:border-coder-red/30 transition-colors">
                           Remove
                         </button>
                       )}
                     </div>
 
                     {/* Outreach note */}
-                    <div className="mt-3 bg-[#0C0E0F] border border-white/[0.08] rounded-lg p-3">
+                    <div className="mt-3 bg-coder-surface border border-white/[0.08] rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-white/30">Personal connection note</span>
                         <div className="flex items-center gap-1.5">
                           {isAdmin && (
                             <>
                               <button onClick={() => regen(s.id, "warm")} disabled={busyNote === s.id}
-                                className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded text-[#66FFAB]/70 border border-[#66FFAB]/20 hover:bg-[#66FFAB]/10 disabled:opacity-40 transition-colors" title="Warm & genuine">
+                                className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded text-coder-green/70 border border-coder-green/20 hover:bg-coder-green/10 disabled:opacity-40 transition-colors" title="Warm & genuine">
                                 Warm
                               </button>
                               <button onClick={() => regen(s.id, "witty")} disabled={busyNote === s.id}
-                                className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded text-[#BC7CFF]/70 border border-[#BC7CFF]/20 hover:bg-[#BC7CFF]/10 disabled:opacity-40 transition-colors" title="A little witty">
+                                className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded text-coder-purple/70 border border-coder-purple/20 hover:bg-coder-purple/10 disabled:opacity-40 transition-colors" title="A little witty">
                                 Witty
                               </button>
                               <button onClick={() => regen(s.id, "thoughtful")} disabled={busyNote === s.id}
-                                className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded text-[#01F2FF]/70 border border-[#01F2FF]/20 hover:bg-[#01F2FF]/10 disabled:opacity-40 transition-colors" title="Thoughtful & sincere">
+                                className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded text-coder-cyan/70 border border-coder-cyan/20 hover:bg-coder-cyan/10 disabled:opacity-40 transition-colors" title="Thoughtful & sincere">
                                 Thoughtful
                               </button>
                             </>

@@ -36,7 +36,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-[#090B0B] px-4 overflow-hidden">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-coder-bg px-4 overflow-hidden">
 
       {/* Subtle purple radial glow */}
       <div
@@ -84,7 +84,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full px-3.5 py-2.5 bg-[#0D1011] border border-white/10 rounded-lg text-white placeholder-white/20 text-sm focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors"
+              className="w-full px-3.5 py-2.5 bg-coder-control border border-white/10 rounded-lg text-white placeholder-white/20 text-sm focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors"
               placeholder="you@coder.com"
             />
           </div>
@@ -103,13 +103,13 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              className="w-full px-3.5 py-2.5 bg-[#0D1011] border border-white/10 rounded-lg text-white placeholder-white/20 text-sm focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors"
+              className="w-full px-3.5 py-2.5 bg-coder-control border border-white/10 rounded-lg text-white placeholder-white/20 text-sm focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-[#FF8067]/10 border border-[#FF8067]/25 rounded-lg text-[#FF8067] text-sm">
+            <div className="flex items-center gap-2 p-3 bg-coder-coral/10 border border-coder-coral/25 rounded-lg text-coder-coral text-sm">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="flex-shrink-0">
                 <circle cx="7" cy="7" r="6"/>
                 <path d="M7 4v3M7 10h.01"/>
@@ -121,7 +121,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-[#BC7CFF] hover:bg-[#CA96FF] active:bg-[#B070F0] disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold text-sm rounded-lg transition-colors mt-2"
+            className="w-full py-2.5 px-4 bg-coder-purple hover:bg-coder-purple-hover active:bg-coder-purple-active disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold text-sm rounded-lg transition-colors mt-2"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>

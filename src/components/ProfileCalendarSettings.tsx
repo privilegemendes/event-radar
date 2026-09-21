@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { SPEAKING_LEVELS, SPEAKING_LEVEL_LABELS, type ApplicantProfile, type SpeakingLevel } from "@/lib/profile-schema";
 
 const inputCls =
-  "w-full px-3 py-2.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";
+  "w-full px-3 py-2.5 bg-coder-control border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors";
 const labelCls = "block font-mono text-[9px] uppercase tracking-[0.1em] text-white/40 mb-1.5";
 
 const TEXT_FIELDS: { key: keyof ApplicantProfile; label: string; ph?: string; full?: boolean }[] = [
@@ -112,7 +112,7 @@ export default function ProfileCalendarSettings() {
   return (
     <>
       {/* Automatic Discovery */}
-      <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 mb-4">
+      <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 mb-4">
         <div className="flex items-center justify-between mb-1">
           <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40">Automatic Discovery</p>
           {auto && (
@@ -120,7 +120,7 @@ export default function ProfileCalendarSettings() {
               onClick={toggleAuto}
               role="switch"
               aria-checked={auto.enabled}
-              className={`relative w-11 h-6 rounded-full transition-colors ${auto.enabled ? "bg-[#66FFAB]" : "bg-white/15"}`}
+              className={`relative w-11 h-6 rounded-full transition-colors ${auto.enabled ? "bg-coder-green" : "bg-white/15"}`}
             >
               <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${auto.enabled ? "translate-x-5" : ""}`} />
             </button>
@@ -131,7 +131,7 @@ export default function ProfileCalendarSettings() {
           Each run rotates its focus (Women-in-Tech, founder meetups, AI podcasts, etc.) and skips duplicates.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${auto?.enabled ? "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30" : "bg-white/5 text-white/40 border border-white/10"}`}>
+          <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${auto?.enabled ? "bg-coder-green/15 text-coder-green border border-coder-green/30" : "bg-white/5 text-white/40 border border-white/10"}`}>
             {auto?.enabled ? "On" : "Off"}
           </span>
           {auto?.lastRun && (
@@ -148,13 +148,13 @@ export default function ProfileCalendarSettings() {
       </div>
 
       {/* Applicant Profile */}
-      <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 mb-4">
+      <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 mb-4">
         <div className="flex items-center justify-between mb-1">
           <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40">Applicant Profile</p>
           <button
             onClick={saveProfile}
             disabled={savingProfile || !profile}
-            className="px-3 py-1.5 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-mono text-[9px] uppercase tracking-[0.08em] font-bold rounded-lg transition-colors"
+            className="px-3 py-1.5 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-mono text-[9px] uppercase tracking-[0.08em] font-bold rounded-lg transition-colors"
           >
             {savingProfile ? "Saving…" : profileSaved ? "Saved ✓" : "Save profile"}
           </button>
@@ -197,7 +197,7 @@ export default function ProfileCalendarSettings() {
       </div>
 
       {/* Speaker Brief — drives discovery, scoring and pitches */}
-      <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 mb-4">
+      <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 mb-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40 mb-1">Speaker Brief</p>
         <p className="text-sm text-white/50 mb-4">
           Steers AI discovery, scoring and pitch drafting. Changes apply to the next discovery run.
@@ -241,7 +241,7 @@ export default function ProfileCalendarSettings() {
             <button
               onClick={saveProfile}
               disabled={savingProfile}
-              className="px-4 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
+              className="px-4 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
             >
               {savingProfile ? "Saving…" : profileSaved ? "Saved ✓" : "Save brief"}
             </button>
@@ -250,15 +250,15 @@ export default function ProfileCalendarSettings() {
       </div>
 
       {/* Work Calendar */}
-      <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-5 mb-4">
+      <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-5 mb-4">
         <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/40 mb-1">Work Calendar</p>
         <p className="text-sm text-white/50 mb-4">
           Connect a <span className="text-white/70">read-only</span> Google Calendar ICS feed to see whether you&rsquo;re
           free for an event. In Google Calendar: Settings → your calendar → <em>Secret address in iCal format</em>.
         </p>
 
-        <div className="rounded-lg bg-[#FF8067]/8 border border-[#FF8067]/20 p-3 mb-4">
-          <p className="font-mono text-[10px] text-[#FF8067]/90 leading-relaxed">
+        <div className="rounded-lg bg-coder-coral/8 border border-coder-coral/20 p-3 mb-4">
+          <p className="font-mono text-[10px] text-coder-coral/90 leading-relaxed">
             ⚠ This URL is a secret — anyone with it can read your whole calendar. It is stored server-side, never shown
             in full, and never committed to the repo. In production, set it as the <code>WORK_CALENDAR_ICS_URL</code>{" "}
             environment variable instead.
@@ -268,7 +268,7 @@ export default function ProfileCalendarSettings() {
         <div className="flex items-center gap-2 mb-3">
           <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-white/35">Status:</span>
           {cal?.configured ? (
-            <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30">
+            <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-green/15 text-coder-green border border-coder-green/30">
               Connected{cal.fromEnv ? " (env var)" : ""}
             </span>
           ) : (
@@ -293,7 +293,7 @@ export default function ProfileCalendarSettings() {
             <button
               onClick={saveCalendar}
               disabled={savingCal || !icsInput.trim()}
-              className="px-4 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
+              className="px-4 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black font-semibold text-sm rounded-lg transition-colors"
             >
               {savingCal ? "…" : cal?.configured ? "Replace" : "Connect"}
             </button>
@@ -301,7 +301,7 @@ export default function ProfileCalendarSettings() {
               <button
                 onClick={clearCalendar}
                 disabled={savingCal}
-                className="px-4 py-2 text-sm text-[#FF8067]/70 hover:text-[#FF8067] border border-[#FF8067]/20 hover:border-[#FF8067]/40 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm text-coder-coral/70 hover:text-coder-coral border border-coder-coral/20 hover:border-coder-coral/40 rounded-lg transition-colors"
               >
                 Disconnect
               </button>

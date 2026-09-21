@@ -96,13 +96,13 @@ export default function ApplyModal({ event, onClose }: { event: ApplyEvent; onCl
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-[#101314] border border-white/10 rounded-2xl shadow-2xl"
+        className="relative w-full max-w-lg bg-coder-panel border border-white/10 rounded-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-white/[0.07]">
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#BC7CFF]">Apply helper</p>
+            <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-coder-purple">Apply helper</p>
             <h2 className="text-sm font-semibold text-white mt-0.5 leading-snug">{event.title}</h2>
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white text-lg leading-none">×</button>
@@ -116,7 +116,7 @@ export default function ApplyModal({ event, onClose }: { event: ApplyEvent; onCl
                 href={cfpLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-[#BC7CFF] text-black text-xs font-semibold hover:bg-[#CA96FF] transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-coder-purple text-black text-xs font-semibold hover:bg-coder-purple-hover transition-colors"
               >
                 Open CFP / form ↗
               </a>
@@ -124,7 +124,7 @@ export default function ApplyModal({ event, onClose }: { event: ApplyEvent; onCl
             {mailto && (
               <a
                 href={mailto}
-                className="px-3 py-1.5 rounded-lg bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30 text-xs font-semibold hover:bg-[#01F2FF]/25 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30 text-xs font-semibold hover:bg-coder-cyan/25 transition-colors"
               >
                 Draft email ↗
               </a>
@@ -151,7 +151,7 @@ export default function ApplyModal({ event, onClose }: { event: ApplyEvent; onCl
           ) : filled.length === 0 ? (
             <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-center">
               <p className="text-xs text-white/50">Your Applicant Profile is empty.</p>
-              <Link href="/settings" onClick={onClose} className="inline-block mt-2 font-mono text-[10px] uppercase tracking-wider text-[#BC7CFF] hover:text-[#CA96FF]">
+              <Link href="/settings" onClick={onClose} className="inline-block mt-2 font-mono text-[10px] uppercase tracking-wider text-coder-purple hover:text-coder-purple-hover">
                 Set it up in Settings →
               </Link>
             </div>
@@ -164,13 +164,13 @@ export default function ApplyModal({ event, onClose }: { event: ApplyEvent; onCl
                 <button
                   key={key}
                   onClick={() => copy(label, String(profile![key]))}
-                  className="w-full flex items-start gap-3 text-left px-3 py-2 rounded-lg bg-[#0D1011] border border-white/[0.07] hover:border-[#BC7CFF]/30 hover:bg-[#141718] transition-colors group"
+                  className="w-full flex items-start gap-3 text-left px-3 py-2 rounded-lg bg-coder-control border border-white/[0.07] hover:border-coder-purple/30 hover:bg-coder-panel-alt transition-colors group"
                 >
                   <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-white/35 w-24 flex-shrink-0 pt-0.5">
                     {label}
                   </span>
                   <span className="text-xs text-white/80 flex-1 min-w-0 break-words">{String(profile![key])}</span>
-                  <span className="font-mono text-[9px] text-white/25 group-hover:text-[#BC7CFF] flex-shrink-0 pt-0.5">
+                  <span className="font-mono text-[9px] text-white/25 group-hover:text-coder-purple flex-shrink-0 pt-0.5">
                     {copied === label ? "copied ✓" : "copy"}
                   </span>
                 </button>

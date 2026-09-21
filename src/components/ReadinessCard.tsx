@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import EventAvatar from "./EventAvatar";
 import type { ChecklistItem, StageItem } from "@/lib/constants";
+import { BRAND, type BrandAccent } from "@/lib/brand";
 
 export interface CustomTask { id: string; label: string; done: boolean; }
 
@@ -24,8 +25,8 @@ interface ReadinessCardProps {
   event: ReadinessEvent;
   checklist: ChecklistItem[];
   stages: StageItem[];
-  /** "#BC7CFF" for speaking gigs, "#01F2FF" for attending */
-  accent: "#BC7CFF" | "#01F2FF";
+  /** Purple for speaking gigs, cyan for attending. */
+  accent: BrandAccent;
   isAdmin: boolean;
   onReadinessChange?: (id: string, next: Record<string, boolean>) => void;
   onPrepStageChange?: (id: string, stage: string | null) => void;
@@ -42,11 +43,11 @@ function parseCustomTasks(raw: string | null): CustomTask[] {
 
 /* ── Progress color ── */
 function progressColor(done: number, total: number): string {
-  if (total === 0) return "#01F2FF";
+  if (total === 0) return BRAND.cyan;
   const pct = done / total;
-  if (pct >= 1)   return "#66FFAB";
-  if (pct >= 0.5) return "#01F2FF";
-  return "#FF8067";
+  if (pct >= 1)   return BRAND.green;
+  if (pct >= 0.5) return BRAND.cyan;
+  return BRAND.coral;
 }
 
 function fmtDate(d: string | null): string {
@@ -145,7 +146,7 @@ export default function ReadinessCard({
   const activeIdx = stages.findIndex((s) => s.key === prepStage);
 
   return (
-    <div className="bg-[#101314] rounded-xl p-4" style={{ border: `1px solid ${accent}18` }}>
+    <div className="bg-coder-panel rounded-xl p-4" style={{ border: `1px solid ${accent}18` }}>
 
       {/* ── Header: avatar + title + date + progress ── */}
       <div className="flex items-start gap-3 mb-3">
@@ -245,7 +246,7 @@ export default function ReadinessCard({
                 {isAdmin && !isSaving && (
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-white/25 hover:text-[#FF8067] transition-all ml-1 flex-shrink-0"
+                    className="opacity-0 group-hover:opacity-100 text-white/25 hover:text-coder-coral transition-all ml-1 flex-shrink-0"
                     title="Delete task"
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">

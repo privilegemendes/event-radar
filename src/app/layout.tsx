@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
-      <body className="h-full bg-[#090B0B] text-white antialiased">{children}</body>
+      <body className="h-full bg-coder-bg text-white antialiased">{children}</body>
     </html>
   );
 }

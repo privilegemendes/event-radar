@@ -25,12 +25,12 @@ interface BulkResult {
 const ENGAGED_STAGES = ["Signed", "Close to Sign", "Warm Engagement", "Alliance"];
 
 const inputCls =
-  "w-full px-3 py-2 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors";
+  "w-full px-3 py-2 bg-coder-control border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors";
 
 const STAGE_COLOR: Record<string, string> = {
-  "Signed":           "text-[#66FFAB]",
-  "Close to Sign":    "text-[#01F2FF]",
-  "Warm Engagement":  "text-[#F08DFF]",
+  "Signed":           "text-coder-green",
+  "Close to Sign":    "text-coder-cyan",
+  "Warm Engagement":  "text-coder-pink",
   "To Be Outreached": "text-white/30",
 };
 
@@ -152,11 +152,11 @@ export default function PartnersPage() {
             <button
               onClick={findAllEngaged}
               disabled={bulkRunning || !!running}
-              className="flex items-center gap-2 px-3 py-2 border border-[#BC7CFF]/30 text-[#BC7CFF]/80 hover:text-[#BC7CFF] hover:border-[#BC7CFF]/60 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-all disabled:opacity-40"
+              className="flex items-center gap-2 px-3 py-2 border border-coder-purple/30 text-coder-purple/80 hover:text-coder-purple hover:border-coder-purple/60 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-all disabled:opacity-40"
             >
               {bulkRunning ? (
                 <>
-                  <span className="animate-spin w-3 h-3 border border-[#BC7CFF]/30 border-t-[#BC7CFF] rounded-full inline-block" />
+                  <span className="animate-spin w-3 h-3 border border-coder-purple/30 border-t-coder-purple rounded-full inline-block" />
                   Scanning…
                 </>
               ) : (
@@ -173,7 +173,7 @@ export default function PartnersPage() {
           {isAdmin && (
             <button
               onClick={() => setShowAdd(!showAdd)}
-              className="px-4 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] text-black text-sm font-semibold rounded-lg transition-colors"
+              className="px-4 py-2 bg-coder-purple hover:bg-coder-purple-hover text-black text-sm font-semibold rounded-lg transition-colors"
             >
               {showAdd ? "Cancel" : "+ Add Partner"}
             </button>
@@ -183,16 +183,16 @@ export default function PartnersPage() {
 
       {/* Bulk progress bar */}
       {bulkRunning && bulkProgress && (
-        <div className="mb-4 bg-[#101314] border border-[#BC7CFF]/20 rounded-xl p-3.5">
+        <div className="mb-4 bg-coder-panel border border-coder-purple/20 rounded-xl p-3.5">
           <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[10px] text-[#BC7CFF]">
+            <span className="font-mono text-[10px] text-coder-purple">
               {bulkProgress.current}/{bulkProgress.total} — {bulkProgress.name}
             </span>
             <span className="font-mono text-[9px] text-white/30 uppercase tracking-widest">Running discovery…</span>
           </div>
           <div className="h-1 bg-white/5 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#BC7CFF] rounded-full transition-all duration-300"
+              className="h-full bg-coder-purple rounded-full transition-all duration-300"
               style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
             />
           </div>
@@ -203,8 +203,8 @@ export default function PartnersPage() {
       {bulkResult && !bulkRunning && (
         <div className={`mb-4 p-3.5 rounded-xl border flex items-center gap-3 ${
           bulkResult.errors === 0
-            ? "bg-[#66FFAB]/5 border-[#66FFAB]/20 text-[#66FFAB]"
-            : "bg-[#FF8067]/5 border-[#FF8067]/20 text-[#FF8067]"
+            ? "bg-coder-green/5 border-coder-green/20 text-coder-green"
+            : "bg-coder-coral/5 border-coder-coral/20 text-coder-coral"
         }`}>
           <span className="text-base">{bulkResult.errors === 0 ? "✓" : "⚠"}</span>
           <div className="flex-1">
@@ -226,7 +226,7 @@ export default function PartnersPage() {
 
       {/* Add partner form */}
       {showAdd && isAdmin && (
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {([
             ["Name *",       "name",        "Acme Corp"],
             ["Country",      "country",     "UK"],
@@ -273,7 +273,7 @@ export default function PartnersPage() {
             <button
               onClick={addPartner}
               disabled={adding || !np.name}
-              className="px-5 py-2 bg-[#BC7CFF] hover:bg-[#CA96FF] disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors"
+              className="px-5 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors"
             >
               {adding ? "Adding…" : "Add Partner"}
             </button>
@@ -286,18 +286,18 @@ export default function PartnersPage() {
         <input
           type="text" placeholder="Search partners…" value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-40 px-3 py-1.5 bg-[#0D1011] border border-white/10 rounded-lg text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-[#BC7CFF] focus:ring-1 focus:ring-[#BC7CFF] transition-colors"
+          className="flex-1 min-w-40 px-3 py-1.5 bg-coder-control border border-white/10 rounded-lg text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors"
         />
         <select
           value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}
-          className="px-3 py-1.5 bg-[#0D1011] border border-white/10 rounded-lg font-mono text-[10px] uppercase tracking-[0.06em] text-white/50 focus:outline-none focus:border-[#BC7CFF]"
+          className="px-3 py-1.5 bg-coder-control border border-white/10 rounded-lg font-mono text-[10px] uppercase tracking-[0.06em] text-white/50 focus:outline-none focus:border-coder-purple"
         >
           <option value="">All regions</option>
           {PARTNER_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
         <select
           value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}
-          className="px-3 py-1.5 bg-[#0D1011] border border-white/10 rounded-lg font-mono text-[10px] uppercase tracking-[0.06em] text-white/50 focus:outline-none focus:border-[#BC7CFF]"
+          className="px-3 py-1.5 bg-coder-control border border-white/10 rounded-lg font-mono text-[10px] uppercase tracking-[0.06em] text-white/50 focus:outline-none focus:border-coder-purple"
         >
           <option value="">All stages</option>
           {PARTNER_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -308,7 +308,7 @@ export default function PartnersPage() {
       {loading ? (
         <div className="flex items-center justify-center h-40 text-white/30 font-mono text-sm">Loading…</div>
       ) : (
-        <div className="bg-[#101314] border border-white/[0.08] rounded-xl overflow-hidden">
+        <div className="bg-coder-panel border border-white/[0.08] rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -356,7 +356,7 @@ export default function PartnersPage() {
                         <button
                           onClick={() => findEvents(p.id)}
                           disabled={running === p.id || bulkRunning}
-                          className="font-mono text-[9px] uppercase tracking-[0.06em] px-2 py-1 text-[#BC7CFF]/70 hover:text-[#BC7CFF] border border-[#BC7CFF]/20 hover:border-[#BC7CFF]/40 rounded transition-colors disabled:opacity-30"
+                          className="font-mono text-[9px] uppercase tracking-[0.06em] px-2 py-1 text-coder-purple/70 hover:text-coder-purple border border-coder-purple/20 hover:border-coder-purple/40 rounded transition-colors disabled:opacity-30"
                         >
                           {running === p.id ? "…" : "Find events"}
                         </button>

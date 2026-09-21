@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ReadinessCard, { type CustomTask } from "@/components/ReadinessCard";
 import { SPEAKING_CHECKLIST, ATTENDING_CHECKLIST, GIG_STAGES, ATTEND_STAGES } from "@/lib/constants";
 import { TypeIcon } from "@/components/EventAvatar";
+import { BRAND } from "@/lib/brand";
 
 interface PodiumEvent {
   id: string;
@@ -106,7 +107,7 @@ export default function PodiumsPage() {
             </p>
             <button
               onClick={() => router.push("/")}
-              className="mt-4 font-mono text-[9px] text-[#BC7CFF]/60 hover:text-[#BC7CFF] uppercase tracking-widest transition-colors"
+              className="mt-4 font-mono text-[9px] text-coder-purple/60 hover:text-coder-purple uppercase tracking-widest transition-colors"
             >
               Go to Overview →
             </button>
@@ -135,11 +136,11 @@ export default function PodiumsPage() {
           {upcomingSpeaking.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-4">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#BC7CFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={BRAND.purple} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="10" r="4"/>
                   <path d="M12 14v4M8 20h8M6 6.5C4.8 8 4 9.9 4 12M18 6.5c1.2 1.5 2 3.4 2 5.5"/>
                 </svg>
-                <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#BC7CFF]">
+                <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-coder-purple">
                   Upcoming speaking gigs
                 </h2>
                 <span className="font-mono text-[10px] text-white/30">{upcomingSpeaking.length}</span>
@@ -151,7 +152,7 @@ export default function PodiumsPage() {
                     event={ev}
                     checklist={SPEAKING_CHECKLIST}
                     stages={GIG_STAGES}
-                    accent="#BC7CFF"
+                    accent={BRAND.purple}
                     isAdmin={isAdmin}
                     onReadinessChange={(id, next) => updateEvent(id, { readiness: JSON.stringify(next) })}
                     onPrepStageChange={(id, stage) => updateEvent(id, { prepStage: stage })}
@@ -166,11 +167,11 @@ export default function PodiumsPage() {
           {upcomingAttending.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-4">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#01F2FF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={BRAND.cyan} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                   <circle cx="12" cy="10" r="3"/>
                 </svg>
-                <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#01F2FF]">
+                <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-coder-cyan">
                   Upcoming attending events
                 </h2>
                 <span className="font-mono text-[10px] text-white/30">{upcomingAttending.length}</span>
@@ -182,7 +183,7 @@ export default function PodiumsPage() {
                     event={ev}
                     checklist={ATTENDING_CHECKLIST}
                     stages={ATTEND_STAGES}
-                    accent="#01F2FF"
+                    accent={BRAND.cyan}
                     isAdmin={isAdmin}
                     onReadinessChange={(id, next) => updateEvent(id, { readiness: JSON.stringify(next) })}
                     onPrepStageChange={(id, stage) => updateEvent(id, { prepStage: stage })}
