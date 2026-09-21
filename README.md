@@ -127,19 +127,38 @@ Discovery also runs on a schedule so new events keep arriving without clicking a
 
 ### Prerequisites & blockers
 
-1. **Access protection (required).** Viewing in this app is intentionally open —
+> Items 1 and 2 were open blockers and are now resolved; they are kept here as
+> standing constraints rather than to-dos.
+
+1. **Access protection — DONE.** Viewing in this app is intentionally open —
    there is no login wall for reads (`GET`s are public; only writes require an
-   admin session). Inside the Coder workspace that is safe because the Coder
-   proxy limits who can reach it. On a **public Vercel URL, viewing would be open
-   to anyone with the link**, so enable **Vercel Access Protection**
-   (Standard Protection / SSO, or Password Protection — Pro/Enterprise) on the
-   project, or place it behind Coder/Google SSO, **before sharing the URL**.
-2. **Database.** Dev uses SQLite on a local file (`prisma/dev.db`), which does
-   **not** work on Vercel's ephemeral filesystem. Switch the Prisma datasource to
-   a hosted **Postgres** (Vercel Postgres / Neon), run migrations, and set
-   `DATABASE_URL`. (Supabase requires IT coordination via #help-me-ops.)
-3. **Function duration.** Discovery/analyze routes set `maxDuration = 300`, which
-   requires a **Vercel Pro** team (Hobby caps well below that).
+   admin session), so a public Vercel URL would be readable by anyone with the
+   link. **Vercel Access Protection is now enabled** on the project
+   (`ssoProtection`, covering production URLs *and* all previews), which closes
+   this. Verified 2026-09-21 via the Vercel API. Do not disable it without
+   putting an equivalent gate in front — the app has no read-side login of its
+   own.
+2. **Database — DONE.** The Prisma datasource is already `postgresql`, backed by
+   a hosted **Neon** instance, with `DATABASE_URL` (pooled) and
+   `DATABASE_URL_UNPOOLED` (direct) set. Verified 2026-09-21 by connecting to it.
+   Note Neon auto-suspends: a cold start can exceed Prisma's default 10s pool
+   timeout, so one-off scripts should use the unpooled URL with a raised
+   `connect_timeout` (see `scripts/backfill-speaker-brief.ts`).
+3. **Function duration — probably fine, not proven at runtime.** Discovery,
+   analyze and cron routes set `maxDuration = 300`. This was written down as
+   needing a **Vercel Pro** team; that looks outdated:
+
+   - Vercel's current docs show `export const maxDuration = 1800` as a valid
+     App Router value, and the platform default is now 300s across plans.
+   - A build on the **Hobby** team accepted all three 300s routes with no
+     warning (2026-09-21).
+
+   What has **not** been shown is that a request actually survives past the old
+   60s ceiling at runtime — a plan cap would clamp silently at invocation, not
+   fail the build. To settle it, deploy a route that sleeps ~75s and open it in
+   a browser (deployments are behind Vercel SSO, so an unauthenticated fetch
+   just 302s to `vercel.com/sso-api`). If the 300s limit does *not* hold, the
+   weekly cron discovery run is what breaks.
 4. **Env vars** (Vercel project settings): `DATABASE_URL`, `SESSION_SECRET`,
    `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`. The `ANTHROPIC_*` values are only
    injected inside Coder workspaces — copy them into Vercel manually.

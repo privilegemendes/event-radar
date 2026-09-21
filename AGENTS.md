@@ -13,11 +13,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Access model:** viewing is open (public `GET`s); edits, discovery, and AI
   actions require an ADMIN session. Inside Coder the proxy limits who can reach
   the app.
-- **Before any Vercel deploy:** the app has no read-side login wall, so a public
-  Vercel URL would be world-viewable. Enable Vercel Access Protection / SSO first.
-  Also: SQLite must move to hosted Postgres, `maxDuration = 300` needs Vercel Pro,
-  connect via `vercel git connect` (coder-internal, no personal accounts). See the
-  **Deployment (Vercel)** section in `README.md` for the full checklist.
+- **Vercel deploy state (verified 2026-09-21):** Access Protection is **enabled**
+  (`ssoProtection`, production + all previews) — the app has no read-side login of
+  its own, so do not disable it without an equivalent gate. The datasource is
+  already hosted **Postgres** on Neon, not SQLite. Still open: the project is on a
+  **personal** GitHub repo and Vercel team, while the README's SMART AI Guidelines
+  say to use the **coder-internal** org for both. See the **Deployment (Vercel)**
+  section in `README.md`.
 - **Prompts are not hardcoded.** Every LLM call renders its speaker profile,
   scoring rubric, exclusions and search plan from the stored profile via
   `src/lib/speaker-brief.ts`. Do not reintroduce a literal `SPEAKER_PROFILE`
