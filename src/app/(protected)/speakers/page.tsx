@@ -137,7 +137,7 @@ export default function SpeakersPage() {
                   {/* Rank + avatar */}
                   <div className="flex flex-col items-center gap-1 flex-shrink-0 w-11">
                     <span className="font-mono text-[10px] font-bold" style={{ color: rankColor }}>#{i + 1}</span>
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-mono text-[12px] font-bold text-white/80 bg-[#1A1E1F] border border-white/10">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-mono text-[12px] font-bold text-white/80 bg-coder-panel-alt border border-white/10">
                       {initials(s.name)}
                     </div>
                   </div>
@@ -177,7 +177,7 @@ export default function SpeakersPage() {
                     {/* Action buttons */}
                     <div className="flex flex-wrap items-center gap-2 mt-3">
                       <a href={linkedinLink(s)} target="_blank" rel="noopener noreferrer"
-                        className="font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded bg-[#0A66C2]/15 text-[#4DA3F0] border border-[#0A66C2]/30 hover:bg-[#0A66C2]/25 transition-colors">
+                        className="font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded bg-brand-linkedin/15 text-brand-linkedin-fg border border-brand-linkedin/30 hover:bg-brand-linkedin/25 transition-colors">
                         {s.linkedinUrl ? "LinkedIn profile" : "LinkedIn search"} ↗
                       </a>
                       <a href={salesNavLink(s)} target="_blank" rel="noopener noreferrer"
@@ -187,7 +187,7 @@ export default function SpeakersPage() {
                       <button
                         onClick={() => { if (s.outreachNote) copyNote(s.id, s.outreachNote); window.open(messageLink(s), "_blank", "noopener"); }}
                         title="Opens a LinkedIn message to this person and copies your note to paste"
-                        className="font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded bg-[#0A66C2]/15 text-[#4DA3F0] border border-[#0A66C2]/30 hover:bg-[#0A66C2]/25 transition-colors">
+                        className="font-mono text-[10px] uppercase tracking-[0.06em] px-2.5 py-1 rounded bg-brand-linkedin/15 text-brand-linkedin-fg border border-brand-linkedin/30 hover:bg-brand-linkedin/25 transition-colors">
                         {copiedId === s.id ? "Note copied ✓" : "Message ↗"}
                       </button>
                       {isAdmin && (

@@ -20,6 +20,11 @@
   --coder-pink:           #F08DFF;
   --coder-amber:          #FFC46B;
   --coder-red:            #FF6B6B;
+
+  /* Third-party brand colors. Not ours — matched to the service so the
+     affordance is recognisable. */
+  --brand-linkedin:       #0A66C2;
+  --brand-linkedin-fg:    #4DA3F0;
 }
 
 /* Expose every brand color as a Tailwind utility: bg-coder-panel,
@@ -45,6 +50,9 @@
   --color-coder-pink:           var(--coder-pink);
   --color-coder-amber:          var(--coder-amber);
   --color-coder-red:            var(--coder-red);
+
+  --color-brand-linkedin:       var(--brand-linkedin);
+  --color-brand-linkedin-fg:    var(--brand-linkedin-fg);
 }
 
 /* ── Reset & base ── */
