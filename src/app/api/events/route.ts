@@ -1,9 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession, getSession } from "@/lib/session";
-import { EventStatus, EventType } from "@prisma/client";
+import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { isOwner } from "@/lib/owner";
+
+/**
+ * Named data contracts for the list endpoint. This route returns every matching
+ * event, so columns a consumer never renders are pure transfer cost — at ~1250
+ * events the full payload is ~1.9 MB, while the map needs four columns of it.
+ *
+ * Each set is traced from what the page AND the components it hands events to
+ * actually read at runtime, not from the page's local interface: those are
+ * incomplete and type the extras as optional, so TypeScript will not catch a
+ * missing field. `isCoderEvent` and `url` in particular are undeclared on the
+ * podium and inbox interfaces but read by EventAvatar.
+ *
+ * An unknown or absent `view` falls through to the full payload.
+ */
+const VIEWS: Record<string, Prisma.EventSelect> = {
+  // Aggregated into location bubbles; no event object reaches a component.
+  map: { region: true, location: true, isOnline: true, status: true },
+
+  calendar: {
+    id: true, title: true, type: true, status: true, startDate: true, endDate: true,
+    partnerId: true, isCoderEvent: true,
+    partner: { select: { name: true, category: true } },
+  },
+
+  // readiness/prepStage/customTasks feed ReadinessCard; isCoderEvent feeds its EventAvatar.
+  podium: {
+    id: true, title: true, type: true, url: true, startDate: true, endDate: true,
+    location: true, isOnline: true, status: true, attending: true,
+    readiness: true, prepStage: true, customTasks: true, isCoderEvent: true,
+  },
+
+  inbox: {
+    id: true, title: true, type: true, cfpDeadline: true, startDate: true,
+    location: true, isOnline: true, region: true, coderRelevant: true,
+    sourceNote: true, industry: true, relevancyScore: true, relevancyRationale: true,
+    suggestedAction: true, url: true, isCoderEvent: true,
+    partner: { select: { name: true, region: true } },
+  },
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,6 +56,7 @@ export async function GET(request: NextRequest) {
     const region = searchParams.get("region");
     const search = searchParams.get("search");
     const category = searchParams.get("category");
+    const view   = searchParams.get("view");
 
     const where: Record<string, unknown> = {};
     // Owner-only (nomad) events are hidden from everyone except the owner.
@@ -36,24 +76,44 @@ export async function GET(request: NextRequest) {
         { location:    { contains: search } },
       ];
     }
+    // The podium view is the only one that also narrows rows: it renders accepted
+    // or attended gigs that have not happened yet. Uses AND so it composes with
+    // the OR that `search` may already have set.
+    if (view === "podium") {
+      where.AND = [
+        { OR: [{ status: { in: ["ACCEPTED", "SPOKEN"] } }, { attending: true }] },
+        { OR: [{ startDate: null }, { startDate: { gte: new Date() } }] },
+      ];
+    }
 
-    const events = await db.event.findMany({
-      where,
-      // Trim fields no list view renders — this endpoint returns every event, so
-      // they are pure transfer cost. The detail route still returns the full row.
-      // `ownerOnly` and `createdAt` stay usable above for filtering and ordering.
-      omit: {
-        ownerOnly:           true,
-        followUpAt:          true,
-        acceptanceRationale: true,
-        attendUrl:           true,
-        socialLinks:         true,
-        createdAt:           true,
-        updatedAt:           true,
-      },
-      include: { partner: { select: { id: true, name: true, region: true, category: true } } },
-      orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { cfpDeadline: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
-    });
+    const orderBy: Prisma.EventOrderByWithRelationInput[] = [
+      { startDate: { sort: "asc", nulls: "last" } },
+      { cfpDeadline: { sort: "asc", nulls: "last" } },
+      { createdAt: "desc" },
+    ];
+
+    // Prisma rejects `select` and `omit` in the same query, so the two shapes are
+    // separate calls. Both share `where` and `orderBy`.
+    const select = view ? VIEWS[view] : undefined;
+    const events = select
+      ? await db.event.findMany({ where, select, orderBy })
+      : await db.event.findMany({
+          where,
+          // Trim fields no list view renders — this endpoint returns every event, so
+          // they are pure transfer cost. The detail route still returns the full row.
+          // `ownerOnly` and `createdAt` stay usable above for filtering and ordering.
+          omit: {
+            ownerOnly:           true,
+            followUpAt:          true,
+            acceptanceRationale: true,
+            attendUrl:           true,
+            socialLinks:         true,
+            createdAt:           true,
+            updatedAt:           true,
+          },
+          include: { partner: { select: { id: true, name: true, region: true, category: true } } },
+          orderBy,
+        });
 
     return NextResponse.json(events);
   } catch (err) {

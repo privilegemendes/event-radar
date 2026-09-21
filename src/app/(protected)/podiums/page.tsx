@@ -43,7 +43,7 @@ export default function PodiumsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/events").then((r) => r.json()),
+      fetch("/api/events?view=podium").then((r) => r.json()),
       fetch("/api/users").then((r) => r.ok ? r.json() : Promise.reject()).catch(() => null),
     ]).then(([evs, userOk]) => {
       setEvents(Array.isArray(evs) ? evs as PodiumEvent[] : []);

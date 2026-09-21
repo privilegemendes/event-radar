@@ -40,7 +40,7 @@ export default function CalendarPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/events").then((r) => r.json()),
+      fetch("/api/events?view=calendar").then((r) => r.json()),
       fetch("/api/partners").then((r) => r.json()),
     ])
       .then(([evs, pts]: [Event[], PartnerBasic[]]) => {
