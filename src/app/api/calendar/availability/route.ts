@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 /** Short in-memory cache so we don't refetch the ICS on every event. */
 let cache: { url: string; at: number; busy: BusyInterval[] } | null = null;
 const TTL_MS = 5 * 60 * 1000;
+/** Upper bound on items per availability request; see the POST handler. */
+const MAX_ITEMS = 1000;
 
 async function loadBusy(url: string): Promise<BusyInterval[]> {
   if (cache && cache.url === url && Date.now() - cache.at < TTL_MS) {
@@ -65,9 +67,14 @@ export async function POST(request: NextRequest) {
     const items: { id: string; start: string | null; end?: string | null }[] = Array.isArray(body.items)
       ? body.items
       : [];
+    // The dashboard sends one item per displayed event and that list is
+    // unpaginated, so the array is caller-controlled and grows with the corpus.
+    // Truncate rather than reject: an id missing from `results` already renders
+    // no chip, so this degrades quietly instead of failing the whole request.
+    const capped = items.slice(0, MAX_ITEMS);
     const busy = await loadBusy(url);
     const results: Record<string, ReturnType<typeof checkAvailability>> = {};
-    for (const it of items) {
+    for (const it of capped) {
       const start = it.start ? new Date(it.start).getTime() : NaN;
       const end = it.end ? new Date(it.end).getTime() : NaN;
       results[it.id] = checkAvailability(busy, isNaN(start) ? null : start, isNaN(end) ? null : end);

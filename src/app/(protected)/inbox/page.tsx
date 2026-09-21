@@ -46,7 +46,7 @@ export default function InboxPage() {
 
   const loadData = async () => {
     const [evRes, runRes] = await Promise.all([
-      fetch("/api/events?status=DISCOVERED"),
+      fetch("/api/events?status=DISCOVERED&view=inbox"),
       fetch("/api/discovery"),
     ]);
     const evData  = (await evRes.json())  as Event[];

@@ -77,7 +77,7 @@ export default function MapPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/events").then((r) => r.json()),
+      fetch("/api/events?view=map").then((r) => r.json()),
       fetch("/world.geojson").then((r) => r.json()),
     ]).then(([evs, g]: [Ev[], Geo]) => {
       setEvents(Array.isArray(evs) ? evs : []);
