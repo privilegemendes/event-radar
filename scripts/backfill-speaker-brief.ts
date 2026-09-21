@@ -17,7 +17,22 @@
  */
 import { PrismaClient } from "@prisma/client";
 
-const db = new PrismaClient();
+/**
+ * Use the direct (unpooled) connection with generous timeouts. A maintenance
+ * script should not take a slot from the app's pooled connections, and a
+ * serverless Postgres that has auto-suspended needs time to wake — the default
+ * 10s pool timeout fails against a cold Neon compute.
+ */
+function directUrl(): string {
+  const base = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+  if (!base) throw new Error("DATABASE_URL (or DATABASE_URL_UNPOOLED) is not set");
+  const u = new URL(base);
+  u.searchParams.set("connect_timeout", "60");
+  u.searchParams.set("pool_timeout", "60");
+  return u.toString();
+}
+
+const db = new PrismaClient({ datasources: { db: { url: directUrl() } } });
 const KEY = "applicant_profile";
 const WRITE = process.argv.includes("--write");
 
