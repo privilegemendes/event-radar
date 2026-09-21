@@ -8,11 +8,11 @@ const inputCls =
 const labelCls = "block font-mono text-[9px] uppercase tracking-[0.1em] text-white/40 mb-1.5";
 
 const TEXT_FIELDS: { key: keyof ApplicantProfile; label: string; ph?: string; full?: boolean }[] = [
-  { key: "fullName", label: "Full name", ph: "Irmak Eyiceoglu" },
+  { key: "fullName", label: "Full name", ph: "Ada Lovelace" },
   { key: "pronouns", label: "Pronouns", ph: "she/her" },
   { key: "jobTitle", label: "Job title", ph: "EMEA Partner Manager" },
   { key: "company", label: "Company", ph: "Coder" },
-  { key: "email", label: "Email", ph: "irmak@coder.com" },
+  { key: "email", label: "Email", ph: "you@example.com" },
   { key: "phone", label: "Phone", ph: "+31 …" },
   { key: "location", label: "Location", ph: "Amsterdam, NL" },
   { key: "linkedin", label: "LinkedIn URL", ph: "https://linkedin.com/in/…" },

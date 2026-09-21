@@ -121,7 +121,7 @@ Return ONLY a flat JSON array (no markdown, no prose). One object per speaker (a
   "topics": "comma-separated topics or null",
   "region": "Amsterdam/NL | Rest of Europe | London/UK | Austin | Bay Area | Online | Other or null",
   "eventTitle": "the event where they are announced (use the exact title from the list)",
-  "outreachNote": "personalised LinkedIn note under 280 chars, first person as Irmak"
+  "outreachNote": "personalised LinkedIn note under 280 chars, first person as ${name}"
 }]
 Only include real people you found via search. Do not invent names or LinkedIn URLs.`;
 
