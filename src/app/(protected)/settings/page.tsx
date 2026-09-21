@@ -85,7 +85,7 @@ export default function SettingsPage() {
           </div>
 
           {showAdd && (
-            <form onSubmit={addUser} className="mb-5 p-4 bg-coder-sunken border border-white/[0.07] rounded-xl space-y-3">
+            <form onSubmit={addUser} className="mb-5 p-4 bg-coder-panel border border-white/[0.07] rounded-xl space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className={labelCls}>Email</label>

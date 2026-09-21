@@ -199,7 +199,7 @@ export default function SpeakersPage() {
                     </div>
 
                     {/* Outreach note */}
-                    <div className="mt-3 bg-coder-surface border border-white/[0.08] rounded-lg p-3">
+                    <div className="mt-3 bg-coder-panel border border-white/[0.08] rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-white/30">Personal connection note</span>
                         <div className="flex items-center gap-1.5">
