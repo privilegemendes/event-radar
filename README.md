@@ -121,29 +121,62 @@ Discovery also runs on a schedule so new events keep arriving without clicking a
 
 ## Deployment (Vercel)
 
-> **Not yet deployed.** When deploying, follow the SMART AI Guidelines
-> (https://github.com/coder/smart-ai-program/tree/main/docs) and use the
-> **coder-internal** org for both GitHub and Vercel — no personal accounts.
+**Live: https://eventradar-coder.vercel.app** — Vercel project `eventradar`
+(scope `privilegemendes-projects`), connected to `privilegemendes/event-radar`,
+so pushes to `main` auto-deploy and PRs get preview deployments. First deployed
+2026-09-21.
 
-### Prerequisites & blockers
+> **Two deviations from the plan above, recorded deliberately.** This runs under
+> a **personal** Vercel account rather than the **coder-internal** org, because
+> no `coder-internal` team exists on the current login. And the URL is
+> `eventradar-coder.vercel.app` because `eventradar.vercel.app` *and*
+> `event-radar.vercel.app` are both already claimed by other Vercel accounts —
+> `*.vercel.app` names are globally unique, so neither is obtainable.
 
-> Items 1 and 2 were open blockers and are now resolved; they are kept here as
-> standing constraints rather than to-dos.
+### Standing constraints
 
-1. **Access protection — DONE.** Viewing in this app is intentionally open —
-   there is no login wall for reads (`GET`s are public; only writes require an
-   admin session), so a public Vercel URL would be readable by anyone with the
-   link. **Vercel Access Protection is now enabled** on the project
-   (`ssoProtection`, covering production URLs *and* all previews), which closes
-   this. Verified 2026-09-21 via the Vercel API. Do not disable it without
-   putting an equivalent gate in front — the app has no read-side login of its
-   own.
+1. **Access protection — NOT closed. The production domain is public.**
+   Reads in this app are unauthenticated by design (`GET`s are public; only
+   writes require an admin session — see `src/middleware.ts`), so whatever is
+   reachable is world-readable.
+
+   `ssoProtection` is enabled, but at `deploymentType:
+   "prod_deployment_urls_and_all_previews"`, which **excludes assigned
+   production domains**. Measured 2026-09-21 with unauthenticated requests:
+
+   | URL | Result |
+   |-----|--------|
+   | `eventradar-<hash>-privilegemendes-projects.vercel.app` (raw deployment) | `302` → protected |
+   | `eventradar-coder.vercel.app` (the real URL) | **`200` → public** |
+   | `eventradar-gray.vercel.app` (auto-assigned) | **`200` → public** |
+
+   **Reading the setting back from the API is not a verification** — it reports
+   protection as on while the production domain still serves `200`. Always
+   confirm with an unauthenticated `curl` against the domain people actually
+   use.
+
+   To close it, set `deploymentType` to `"all"` (dashboard → Deployment
+   Protection → Vercel Authentication → **All Deployments**). The CLI has no
+   flag for this; `vercel project protection enable --sso` selects the weaker
+   setting above. Note that `"all"` also locks out everyone who is not on the
+   Vercel account — if the tool needs to stay usable by named users, the real
+   fix is a read-side login wall in `src/middleware.ts` instead.
+
 2. **Database — DONE.** The Prisma datasource is already `postgresql`, backed by
    a hosted **Neon** instance, with `DATABASE_URL` (pooled) and
    `DATABASE_URL_UNPOOLED` (direct) set. Verified 2026-09-21 by connecting to it.
    Note Neon auto-suspends: a cold start can exceed Prisma's default 10s pool
    timeout, so one-off scripts should use the unpooled URL with a raised
    `connect_timeout` (see `scripts/backfill-speaker-brief.ts`).
+
+   Migrations run on every deploy — the build command is
+   `prisma migrate deploy && next build`, and Prisma Migrate uses the schema's
+   `directUrl` (`DATABASE_URL_UNPOOLED`), so it bypasses the pooler correctly.
+
+   **Preview deployments currently share the production database.** A preview
+   branch can mutate real partner and event data; give previews their own Neon
+   branch before relying on them.
+
 3. **Function duration — probably fine, not proven at runtime.** Discovery,
    analyze and cron routes set `maxDuration = 300`. This was written down as
    needing a **Vercel Pro** team; that looks outdated:
@@ -155,25 +188,45 @@ Discovery also runs on a schedule so new events keep arriving without clicking a
 
    What has **not** been shown is that a request actually survives past the old
    60s ceiling at runtime — a plan cap would clamp silently at invocation, not
-   fail the build. To settle it, deploy a route that sleeps ~75s and open it in
-   a browser (deployments are behind Vercel SSO, so an unauthenticated fetch
-   just 302s to `vercel.com/sso-api`). If the 300s limit does *not* hold, the
-   weekly cron discovery run is what breaks.
-4. **Env vars** (Vercel project settings): `DATABASE_URL`, `SESSION_SECRET`,
-   `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`. The `ANTHROPIC_*` values are only
-   injected inside Coder workspaces — copy them into Vercel manually.
+   fail the build. To settle it, deploy a route that sleeps ~75s and request it.
+   Use the **production domain**, which is not behind SSO (see item 1); the raw
+   deployment URL would `302` to `vercel.com/sso-api`. If the 300s limit does
+   *not* hold, the weekly cron discovery run is what breaks.
 
-### Connect via GitHub (not a bare CLI upload)
+4. **Env vars.** Set in the project today, for **production and preview**:
 
-```bash
-vercel login            # choose the Coder team, NOT a personal account
-vercel link             # link to the coder-internal project
-vercel git connect      # connect coder-internal/speaking-opportunity-engine
-                        # -> auto-deploy on push + PR preview deployments
-```
+   | Variable | Status |
+   |----------|--------|
+   | `DATABASE_URL` | set (Neon, pooled) |
+   | `DATABASE_URL_UNPOOLED` | set (Neon, direct — used by Migrate) |
+   | `SESSION_SECRET` | set |
+   | `CRON_SECRET` | set — without it `/api/cron/discovery` is **open to anyone** |
+   | `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` | **deliberately unset** |
+   | `OWNER_EMAIL` | unset — falls back to `irmak@coder.com` per `src/lib/owner.ts` |
 
-Confirm the git connection (`vercel project ls` or the dashboard) before calling
-the deploy done. A bare `vercel --prod` does **not** wire up git.
+   The `ANTHROPIC_*` pair is unset on purpose: the workspace values point at the
+   Coder AI bridge (`cdrstable.dev`), which is injected inside Coder workspaces
+   and may be neither reachable nor authorised from Vercel. Until a reachable
+   endpoint is supplied, **discovery, pitch generation and the weekly cron will
+   fail** — everything else works.
+
+### Git connection
+
+Already connected; `vercel git connect` reports
+`privilegemendes/event-radar is already connected to your project`. Confirm with
+`vercel project ls` or the dashboard before calling a deploy done — a bare
+`vercel --prod` does **not** wire up git.
+
+Two operational notes for this repo:
+
+- `vercel deploy` from a local machine intermittently fails with
+  `Error: fetch failed` during source upload, leaving deployments stuck in
+  status `UNKNOWN` that never build. **`vercel redeploy <url>` builds
+  server-side** and avoids the local upload path entirely.
+- A `*.vercel.app` alias set with `vercel alias set` is pinned to one
+  deployment. For a domain to follow production it must also be assigned to the
+  project; verify by deploying again and checking the new deployment's alias
+  list rather than assuming.
 
 ## Tech Stack
 
