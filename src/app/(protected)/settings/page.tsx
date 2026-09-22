@@ -23,13 +23,37 @@ export default function SettingsPage() {
   const [adding,   setAdding]   = useState(false);
   const [addError, setAddError] = useState("");
 
+  const [me, setMe] = useState<string | null>(null);
+  const [roleBusy, setRoleBusy] = useState<string | null>(null);
+  const [roleError, setRoleError] = useState("");
+
   const load = async () => {
     const res = await fetch("/api/users");
     if (res.ok) { setUsers((await res.json()) as User[]); setIsAdmin(true); }
     else setIsAdmin(false);
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    /* Who I am, so the table can explain why my own role is not editable.
+       Matched on email rather than id: /api/auth/me already returns it, email
+       is unique here, and several other pages depend on that endpoint's shape. */
+    fetch("/api/auth/me").then((r) => r.json()).then((d: { email?: string }) => setMe(d?.email ?? null)).catch(() => {});
+  }, []);
+
+  /* The server owns the rules — an admin may not demote themselves, and the
+     last admin may not be demoted at all. This only surfaces the refusal; it
+     does not decide it, so a stale table cannot talk the server into a change
+     it would otherwise reject. */
+  const changeRole = async (id: string, role: "ADMIN" | "MEMBER") => {
+    setRoleBusy(id); setRoleError("");
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }),
+    });
+    if (res.ok) await load();
+    else { const d = (await res.json()) as { error?: string }; setRoleError(d.error ?? "Could not change the role"); }
+    setRoleBusy(null);
+  };
 
   const addUser = async (e: FormEvent) => {
     e.preventDefault();
@@ -85,6 +109,14 @@ export default function SettingsPage() {
             </button>
           </div>
 
+          {roleError && (
+            <div className="mb-4 p-3 bg-coder-coral/10 border border-coder-coral/25 rounded-lg text-coder-coral text-sm flex items-center gap-2">
+              <span>✗</span>
+              <span>{roleError}</span>
+              <button onClick={() => setRoleError("")} className="ml-auto opacity-50 hover:opacity-100 font-mono text-xs">✕</button>
+            </div>
+          )}
+
           {showAdd && (
             <form onSubmit={addUser} className="mb-5 p-4 bg-coder-panel border border-white/[0.07] rounded-xl space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -135,13 +167,32 @@ export default function SettingsPage() {
                   </td>
                   <td className="py-2.5 font-mono text-[10px] text-white/40">{u.email}</td>
                   <td className="py-2.5">
-                    <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${
-                      u.role === "ADMIN"
-                        ? "bg-coder-purple/15 text-coder-purple border border-coder-purple/25"
-                        : "bg-white/5 text-white/40 border border-white/10"
-                    }`}>
-                      {u.role}
-                    </span>
+                    {u.email === me ? (
+                      /* Your own role is fixed here. Demoting yourself takes
+                         effect on the next request and needs another admin to
+                         undo, so it is not a click away. */
+                      <span
+                        title="You cannot change your own role"
+                        className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/25"
+                      >
+                        {u.role} · you
+                      </span>
+                    ) : (
+                      <select
+                        value={u.role}
+                        disabled={roleBusy === u.id}
+                        onChange={(e) => changeRole(u.id, e.target.value as "ADMIN" | "MEMBER")}
+                        aria-label={`Role for ${u.name}`}
+                        className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-1 rounded bg-coder-control border cursor-pointer disabled:opacity-40 focus:outline-none focus:border-coder-purple ${
+                          u.role === "ADMIN"
+                            ? "text-coder-purple border-coder-purple/25"
+                            : "text-white/50 border-white/10"
+                        }`}
+                      >
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="MEMBER">MEMBER</option>
+                      </select>
+                    )}
                   </td>
                   <td className="py-2.5 font-mono text-[9px] text-white/25">{fmt(u.createdAt)}</td>
                 </tr>

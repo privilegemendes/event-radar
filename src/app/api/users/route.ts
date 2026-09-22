@@ -34,15 +34,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "email, name, and password are required" }, { status: 400 });
     }
 
-    /* Better Auth keeps credentials in the `account` table, not on the user
-       row, so creating a user without one would leave them unable to sign in.
-       Both rows go in one transaction — a user with no credential account is
-       a broken account, not a partial one.
-
-       `role` is deliberately set here rather than through Better Auth's
-       sign-up: the field is `input: false` in the auth config precisely so a
-       caller cannot make itself an ADMIN by posting a role. This path is
-       already admin-gated. */
     const passwordHash = await bcrypt.hash(body.password, 12);
     /* Better Auth keeps credentials in the `account` table, not on the user
        row, so creating a user without one would leave them unable to sign in.
