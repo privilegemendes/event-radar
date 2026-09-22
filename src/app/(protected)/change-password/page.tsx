@@ -23,7 +23,7 @@ export default function ChangePasswordPage() {
     if (newPassword !== confirmPassword) { setError("New passwords do not match"); return; }
     if (newPassword.length < 8)         { setError("New password must be at least 8 characters"); return; }
     setLoading(true);
-    const res = await fetch("/api/auth/change-password", {
+    const res = await fetch("/api/account/change-password", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword }),
     });

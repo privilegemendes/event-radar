@@ -52,7 +52,9 @@ The app will display a banner until the default password is changed.
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | SQLite: `file:./prisma/dev.db`. Postgres in prod: `postgresql://...` |
-| `SESSION_SECRET` | 64-char hex secret for JWT signing |
+| `BETTER_AUTH_SECRET` | Secret Better Auth signs sessions with (32+ chars). Falls back to `SESSION_SECRET` if unset. |
+| `BETTER_AUTH_URL` | Where the app is reachable. Optional locally (defaults to `http://localhost:3000`). |
+| `SESSION_SECRET` | Legacy fallback for `BETTER_AUTH_SECRET`. |
 | `OWNER_EMAIL` | Owner account — sees the Podium and private events. Defaults to `irmak@coder.com`. |
 
 ### Production (set manually)
@@ -60,11 +62,40 @@ The app will display a banner until the default password is changed.
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `SESSION_SECRET` | Strong random secret (≥ 64 chars) |
+| `BETTER_AUTH_SECRET` | Strong random secret (≥ 32 chars) |
+| `BETTER_AUTH_URL` | The app's public URL. **Set this explicitly in production** — it is only inferred from Vercel's env vars otherwise, and `VERCEL_URL` is per-deployment, not the stable domain. |
 | `ANTHROPIC_BASE_URL` | Anthropic API gateway base URL |
 | `ANTHROPIC_AUTH_TOKEN` | Anthropic API authentication token |
 
 > In the Coder workspace, `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` are injected automatically. Do not commit them to `.env`.
+
+## Authentication
+
+Sessions are handled by **Better Auth** (email + password; no social providers yet),
+stored in the database and therefore revocable — unlike the stateless JWTs this
+replaced, which stayed valid for their full 7 days.
+
+- Credentials live in the `account` table (`providerId: "credential"`), not on the
+  user row. A user without one cannot sign in, so `POST /api/users` and the seed
+  both create it in the same step.
+- Passwords stay **bcrypt** via Better Auth's custom `hash`/`verify`, so existing
+  users kept their passwords through the migration.
+- `role` and `mustChangePassword` are Better Auth `additionalFields` on the user.
+  Both are `input: false`, so a caller cannot make itself an ADMIN at sign-up.
+- Middleware only checks that a session **cookie exists** — it does not validate
+  it, and is not an authorization mechanism. Real checks run server-side in
+  `requireSession()` / `requireAdmin()`, and in `app/(protected)/podiums/layout.tsx`
+  for the owner-only Podium.
+
+> **This does not make the app private.** Reads are still public by design, so the
+> deployment continues to depend on Vercel Access Protection. Gating reads behind
+> a login is a separate, open product decision.
+
+### Re-generating the auth schema
+
+`npx @better-auth/cli generate` rewrites `prisma/schema.prisma`. It re-adds
+`@@map("user")` to the `User` model every time — **delete it**, or the next
+migration renames a populated table.
 
 ## Speaker brief
 

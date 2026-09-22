@@ -1,4 +1,4 @@
-import { AuthError, authErrorResponse } from "./session";
+import { AuthError, authErrorResponse } from "./auth-error";
 
 /**
  * Covers the contract the 16 converted route handlers depend on. getSession /

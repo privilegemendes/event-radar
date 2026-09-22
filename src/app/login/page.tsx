@@ -1,5 +1,7 @@
 "use client";
 
+import { signIn } from "@/lib/auth-client";
+
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -16,17 +18,14 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (res.ok) {
+      const { error } = await signIn.email({ email, password });
+      if (error) {
+        // Better Auth returns a generic message for a bad email or password;
+        // keep the existing wording so the copy does not leak which was wrong.
+        setError(error.message ?? "Invalid credentials");
+      } else {
         router.push("/");
         router.refresh();
-      } else {
-        const data = await res.json() as { error?: string };
-        setError(data.error ?? "Login failed");
       }
     } catch {
       setError("Network error, please try again");

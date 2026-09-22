@@ -1,4 +1,4 @@
-import type { Session } from "./jwt";
+import type { Session } from "./session";
 
 /**
  * The single "owner" of this workspace — private content (the Podium page and

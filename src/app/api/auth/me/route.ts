@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
 
-// Lightweight session probe for the client: is the caller signed in, and what role?
-// Used by the inbox so any signed-in Coder reviewer (MEMBER or ADMIN) can approve events.
+/**
+ * Session probe for the client: signed in, what role, and are they the owner.
+ *
+ * Read by the inbox so any signed-in reviewer (MEMBER or ADMIN) can approve
+ * events, and by the sidebar to decide whether to show the owner-only Podium.
+ *
+ * Kept as an explicit route rather than using Better Auth's /api/auth/get-session
+ * because several pages read `role` and `isOwner` directly, and OWNER_EMAIL is
+ * not a public env var so the client cannot resolve ownership itself. A static
+ * segment takes precedence over the [...all] catch-all next to it.
+ */
 export async function GET() {
   const session = await getSession();
   return NextResponse.json({
@@ -11,8 +20,6 @@ export async function GET() {
     role: session?.role ?? null,
     name: session?.name ?? null,
     email: session?.email ?? null,
-    // Resolved server-side: OWNER_EMAIL is not a public env var, so the client
-    // cannot compare against it itself.
     isOwner: isOwner(session),
   });
 }

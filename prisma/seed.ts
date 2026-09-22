@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import * as fs from "fs";
 import * as path from "path";
+import { randomUUID } from "crypto";
 
 const db = new PrismaClient();
 
@@ -28,17 +29,35 @@ async function main() {
   ];
 
   for (const u of users) {
-    await db.user.upsert({
+    const user = await db.user.upsert({
       where: { email: u.email },
       update: {},
       create: {
         email: u.email,
         name: u.name,
-        passwordHash: hash,
         role: u.role,
         mustChangePassword: true,
       },
     });
+    /* Better Auth reads credentials from `account`, not from the user row, so a
+       seeded user without this cannot sign in at all. Guarded so re-seeding an
+       existing database does not create a second credential for the same user. */
+    const existing = await db.account.findFirst({
+      where: { userId: user.id, providerId: "credential" },
+      select: { id: true },
+    });
+    if (!existing) {
+      await db.account.create({
+        data: {
+          id: randomUUID(),
+          accountId: user.id,
+          providerId: "credential",
+          userId: user.id,
+          password: hash,
+          updatedAt: new Date(),
+        },
+      });
+    }
     console.log(`  ✓ User: ${u.email}`);
   }
 

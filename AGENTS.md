@@ -20,6 +20,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   **personal** GitHub repo and Vercel team, while the README's SMART AI Guidelines
   say to use the **coder-internal** org for both. See the **Deployment (Vercel)**
   section in `README.md`.
+- **Auth is Better Auth**, not the old jose JWTs. `src/lib/session.ts` keeps the
+  same `getSession` / `requireSession` / `requireAdmin` / `authErrorResponse` API
+  that every route already uses, so routes should not talk to Better Auth
+  directly. `src/lib/auth-error.ts` is deliberately free of the Better Auth
+  import (ESM-only, unloadable by Jest) and holds the unit-tested parts.
+  Credentials live in `account`, not on the user row — anything creating a user
+  must create a `providerId: "credential"` row too, or that user cannot sign in.
+  Running `npx @better-auth/cli generate` re-adds `@@map("user")` to the `User`
+  model; delete it, or the next migration renames a populated table.
 - **Prompts are not hardcoded.** Every LLM call renders its speaker profile,
   scoring rubric, exclusions and search plan from the stored profile via
   `src/lib/speaker-brief.ts`. Do not reintroduce a literal `SPEAKER_PROFILE`

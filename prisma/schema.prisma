@@ -31,13 +31,32 @@ enum EventStatus {
 }
 
 model User {
-  id                 String   @id @default(cuid())
-  email              String   @unique
-  passwordHash       String
-  name               String
+  id    String @id @default(cuid())
+  email String @unique
+  name  String
+
+  /// Legacy: passwords now live in Account.password (providerId "credential").
+  /// Kept nullable as a rollback net for the Better Auth migration; drop it in a
+  /// later change once sign-in has been exercised in production.
+  passwordHash String?
+
   role               Role     @default(MEMBER)
   mustChangePassword Boolean  @default(false)
+  emailVerified      Boolean  @default(false)
+  image              String?
   createdAt          DateTime @default(now())
+  /// @default(now()) is required as well as @updatedAt: without it the column
+  /// cannot be added NOT NULL to a table that already has rows.
+  updatedAt          DateTime @default(now()) @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  /// NOTE: the Better Auth CLI writes `@@map("user")` here. It is removed on
+  /// purpose — this table already exists as "User" with data, and the map would
+  /// rename it. Better Auth reaches the table through Prisma Client (db.user),
+  /// so the physical name is irrelevant to it. Re-running `auth generate` will
+  /// re-add the map; delete it again.
 }
 
 model Partner {
@@ -49,93 +68,93 @@ model Partner {
   country     String
   keyContact  String
   notes       String
-  region      String?  // NAMER | EMEA | LATAM | APAC
-  tier        String?  // T1 | T2 | T3
+  region      String? // NAMER | EMEA | LATAM | APAC
+  tier        String? // T1 | T2 | T3
   events      Event[]
   createdAt   DateTime @default(now())
 }
 
 model Event {
-  id                   String      @id @default(cuid())
-  title                String
-  type                 EventType
-  startDate            DateTime?
-  endDate              DateTime?
-  location             String?
-  isOnline             Boolean     @default(false)
-  region               String?     // macro region: North America | UK | Europe | Middle East | Africa | Asia Pacific | Online | Other
-  city                 String?     // specific city, e.g. "San Francisco", "London", "Amsterdam", "Austin"
-  coderRelevant        Boolean     @default(false)
-  ownerOnly            Boolean     @default(false)   // private to the owner (e.g. nomad-related events)
-  category             String?     // ATTEND | PARTICIPATE | SPEAK (top-level track)
-  audienceSignals      String?     // JSON array of audience tags (DEVELOPERS, CUSTOMERS, WOMEN_IN_TECH, …)
-  status               EventStatus @default(DISCOVERED)
-  cfpDeadline          DateTime?
-  url                  String?
-  contact              String?
-  description          String?
-  sourceNote           String?
-  partnerId            String?
-  partner              Partner?    @relation(fields: [partnerId], references: [id])
-  pitchDraft           String?
-  followUpAt           DateTime?
+  id              String      @id @default(cuid())
+  title           String
+  type            EventType
+  startDate       DateTime?
+  endDate         DateTime?
+  location        String?
+  isOnline        Boolean     @default(false)
+  region          String? // macro region: North America | UK | Europe | Middle East | Africa | Asia Pacific | Online | Other
+  city            String? // specific city, e.g. "San Francisco", "London", "Amsterdam", "Austin"
+  coderRelevant   Boolean     @default(false)
+  ownerOnly       Boolean     @default(false) // private to the owner (e.g. nomad-related events)
+  category        String? // ATTEND | PARTICIPATE | SPEAK (top-level track)
+  audienceSignals String? // JSON array of audience tags (DEVELOPERS, CUSTOMERS, WOMEN_IN_TECH, …)
+  status          EventStatus @default(DISCOVERED)
+  cfpDeadline     DateTime?
+  url             String?
+  contact         String?
+  description     String?
+  sourceNote      String?
+  partnerId       String?
+  partner         Partner?    @relation(fields: [partnerId], references: [id])
+  pitchDraft      String?
+  followUpAt      DateTime?
 
   // ── Opportunity intelligence ──
-  isPaid               Boolean?   // true = speaker paid (honorarium), false = unpaid, null = unknown
-  paidNote             String?    // e.g. "€500 honorarium" or "speakers pay own travel"
-  ticketCost           String?    // cost to ATTEND / ticket price, e.g. "Free", "~€1,995 (approx)", "From €99"
-  audienceDescription  String?    // who the audience is
-  audienceSize         Int?       // estimated total audience
-  otherSpeakers        String?    // notable confirmed / past speakers
-  acceptanceLikelihood String?    // HIGH | MEDIUM | LOW
-  acceptanceRationale  String?    // one sentence explaining the rating
-  howToApply           String?    // CFP form URL, email, LinkedIn DM, etc.
+  isPaid               Boolean? // true = speaker paid (honorarium), false = unpaid, null = unknown
+  paidNote             String? // e.g. "€500 honorarium" or "speakers pay own travel"
+  ticketCost           String? // cost to ATTEND / ticket price, e.g. "Free", "~€1,995 (approx)", "From €99"
+  audienceDescription  String? // who the audience is
+  audienceSize         Int? // estimated total audience
+  otherSpeakers        String? // notable confirmed / past speakers
+  acceptanceLikelihood String? // HIGH | MEDIUM | LOW
+  acceptanceRationale  String? // one sentence explaining the rating
+  howToApply           String? // CFP form URL, email, LinkedIn DM, etc.
 
   // ── Speaker fit analysis ──
-  industry            String?    // e.g. "startups/entrepreneurship", "enterprise IT", "digital nomads"
-  relevancyScore      Int?       // 0-100: how realistic/valuable for Irmak to get a speaking slot
-  relevancyRationale  String?    // 1-2 sentences explaining the score
-  suggestedAction     String?    // ATTEND | APPLY_TO_SPEAK | BOTH
+  industry           String? // e.g. "startups/entrepreneurship", "enterprise IT", "digital nomads"
+  relevancyScore     Int? // 0-100: how realistic/valuable for Irmak to get a speaking slot
+  relevancyRationale String? // 1-2 sentences explaining the score
+  suggestedAction    String? // ATTEND | APPLY_TO_SPEAK | BOTH
 
   // ── Readiness tracking ──
-  attending           Boolean    @default(false)  // user explicitly marked as attending
-  readiness           String?    // JSON: { [checklistKey]: boolean }
-  prepStage           String?    // current preparation stage key
-  customTasks         String?    // JSON: [{id, label, done}]
+  attending   Boolean @default(false) // user explicitly marked as attending
+  readiness   String? // JSON: { [checklistKey]: boolean }
+  prepStage   String? // current preparation stage key
+  customTasks String? // JSON: [{id, label, done}]
 
   // ── Application links ──
-  applyUrl            String?    // direct CFP / speaker application (SPEAK) page URL
-  attendUrl           String?    // direct attendee registration / tickets (ATTEND) page URL
-  socialLinks         String?    // JSON: {linkedin, instagram, twitter, youtube, facebook}
+  applyUrl    String? // direct CFP / speaker application (SPEAK) page URL
+  attendUrl   String? // direct attendee registration / tickets (ATTEND) page URL
+  socialLinks String? // JSON: {linkedin, instagram, twitter, youtube, facebook}
 
   // ── Coder company events ──
-  isCoderEvent        Boolean    @default(false) // event is on the official Coder event schedule
+  isCoderEvent Boolean @default(false) // event is on the official Coder event schedule
 
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Speaker {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  title         String?         // job title / role
-  company       String?
-  linkedinUrl   String?         // direct profile URL if found
-  background    String?         // short bio / why relevant
-  topics        String?         // comma-separated talk topics
-  region        String?
-  talkCount     Int      @default(0)   // how often they speak across tracked events
-  eventsJson    String?         // JSON array: [{ id, title, startDate }]
-  outreachNote  String?         // generated personalized LinkedIn invite note
-  sourceNote    String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String   @unique
+  title        String? // job title / role
+  company      String?
+  linkedinUrl  String? // direct profile URL if found
+  background   String? // short bio / why relevant
+  topics       String? // comma-separated talk topics
+  region       String?
+  talkCount    Int      @default(0) // how often they speak across tracked events
+  eventsJson   String? // JSON array: [{ id, title, startDate }]
+  outreachNote String? // generated personalized LinkedIn invite note
+  sourceNote   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model AppSetting {
   id        String   @id @default(cuid())
   key       String   @unique
-  value     String   // JSON or plain string; may hold secrets (e.g. calendar ICS URL)
+  value     String // JSON or plain string; may hold secrets (e.g. calendar ICS URL)
   updatedAt DateTime @updatedAt
 }
 
@@ -146,4 +165,52 @@ model DiscoveryRun {
   status     String    @default("RUNNING")
   summary    String?
   found      Int       @default(0)
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { signOut } from "@/lib/auth-client";
+
 import { useRouter } from "next/navigation";
 
 interface TopBarProps {
@@ -14,7 +16,7 @@ export default function TopBar({ name, email, role, mustChangePassword, isGuest 
   const router = useRouter();
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await signOut();
     router.push("/login");
   };
 
