@@ -1,4 +1,4 @@
-import { SPEAKING_LEVELS, type ApplicantProfile, type SpeakingLevel } from "./profile-schema";
+import { EMPTY_PROFILE, SPEAKING_LEVELS, type ApplicantProfile, type SpeakingLevel } from "./profile-schema";
 
 /**
  * Renders the LLM-facing blocks (speaker profile, scoring rubric, exclusions,
@@ -322,4 +322,93 @@ export function isPrivateEvent(
     .join(" ")
     .toLowerCase();
   return keywords.some((k) => hay.includes(k.trim().toLowerCase()));
+}
+
+/* ── Catalogue brief (Phase 4) ────────────────────────────────────────────
+ * Discovery finds events for EVERYONE, so it cannot run on one person's
+ * profile — searching with Irmak's topics and geographies produces a catalogue
+ * that is Irmak's, and a second speaker only ever sees leftovers.
+ *
+ * So the catalogue pass runs on the union: every speaker's topics, every
+ * speaker's geographies, every speaker's exclusions. Scoring (per speaker, no
+ * web search) is what narrows it back down afterwards.
+ */
+
+/** Brief fields that are newline-separated lists and can be unioned. */
+const LIST_FIELDS = [
+  "signatureTopics",
+  "homeGeographies",
+  "excludedDomains",
+  "privateKeywords",
+] as const satisfies readonly (keyof ApplicantProfile)[];
+
+/** Free-text brief fields worth keeping, joined rather than unioned line-wise. */
+const PROSE_FIELDS = ["employerAngle"] as const satisfies readonly (keyof ApplicantProfile)[];
+
+/**
+ * Collapse every speaker's brief into the one a shared catalogue pass runs on.
+ *
+ * Only the fields that steer WHAT IS SEARCHED FOR survive. The person fields
+ * (name, bio, credentials, speaking level) are deliberately dropped: there is
+ * no "the speaker" in a catalogue pass, and a merged one would be a fiction
+ * the prompt would then reason about.
+ *
+ * An empty list — no speaker profiles at all — yields EMPTY_PROFILE, which the
+ * builders already render as a coherent, unfiltered prompt.
+ */
+export function mergeProfilesForCatalogue(profiles: ApplicantProfile[]): ApplicantProfile {
+  const merged: ApplicantProfile = { ...EMPTY_PROFILE };
+
+  for (const field of LIST_FIELDS) {
+    const seen = new Set<string>();
+    const items: string[] = [];
+    for (const p of profiles) {
+      for (const item of parseList(p[field])) {
+        const key = item.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        items.push(item);
+      }
+    }
+    merged[field] = items.join("\n");
+  }
+
+  for (const field of PROSE_FIELDS) {
+    const seen = new Set<string>();
+    const parts: string[] = [];
+    for (const p of profiles) {
+      const v = (p[field] ?? "").trim();
+      if (!v || seen.has(v.toLowerCase())) continue;
+      seen.add(v.toLowerCase());
+      parts.push(v);
+    }
+    merged[field] = parts.join("\n\n");
+  }
+
+  return merged;
+}
+
+/**
+ * What the catalogue pass is looking for, in place of a speaker profile.
+ *
+ * Replaces buildSpeakerProfile + buildScoringRubric in the discovery prompt.
+ * It names the topics and places to search, and says plainly that judging is
+ * not this pass's job — a prompt that still described a person would have the
+ * model quietly score for them anyway.
+ */
+export function buildCatalogueScope(merged: ApplicantProfile): string {
+  const topics = parseList(merged.signatureTopics);
+  const geos = parseList(merged.homeGeographies);
+
+  return [
+    "CATALOGUE PASS — you are building a shared, factual catalogue of events.",
+    "",
+    "Do NOT rate, rank, score or recommend anything, and do not judge anyone's",
+    "chances of being accepted. A separate pass does that, once per speaker.",
+    "Your only job is to find real events and report verifiable facts about them.",
+    "",
+    `TOPICS IN SCOPE:\n${bullets(topics, "- any technology, AI, startup or founder topic")}`,
+    "",
+    `PLACES IN SCOPE:\n${bullets(geos, "- anywhere, plus online")}`,
+  ].join("\n");
 }

@@ -12,6 +12,8 @@ import {
   buildGeographyLine,
   buildSearchPlan,
   isPrivateEvent,
+  mergeProfilesForCatalogue,
+  buildCatalogueScope,
 } from "./speaker-brief";
 
 /** A fully-populated brief, so tests assert on real rendering rather than defaults. */
@@ -284,5 +286,110 @@ describe("buildSearchPlan", () => {
     expect(out).toContain("1. **Podcasts");
     expect(out).toContain("2. **Online webinars");
     expect(out).toContain("3. **Employer-relevant");
+  });
+});
+
+/* ── Phase 4: the shared catalogue brief ────────────────────────────────── */
+
+describe("mergeProfilesForCatalogue", () => {
+  const irmak = {
+    ...EMPTY_PROFILE,
+    fullName: "Irmak",
+    bioShort: "AI engineer",
+    credentials: "Spoke at PyData",
+    speakingLevel: "ESTABLISHED",
+    signatureTopics: "Applied AI\nDeveloper tooling",
+    homeGeographies: "Amsterdam, NL\nBerlin, DE",
+    excludedDomains: "crypto trading",
+    privateKeywords: "nomad",
+    employerAngle: "Coder sells remote dev environments.",
+  };
+  const julia = {
+    ...EMPTY_PROFILE,
+    fullName: "Julia",
+    bioShort: "Design lead",
+    credentials: "Ran a workshop at Config",
+    speakingLevel: "FIRST_TIME",
+    signatureTopics: "Design systems\nApplied AI",
+    homeGeographies: "Lisbon, PT\namsterdam, nl",
+    excludedDomains: "pure sales webinars",
+    privateKeywords: "family",
+    employerAngle: "",
+  };
+
+  it("unions the topics and places every speaker cares about", () => {
+    const m = mergeProfilesForCatalogue([irmak, julia]);
+    expect(parseList(m.signatureTopics)).toEqual(["Applied AI", "Developer tooling", "Design systems"]);
+    expect(parseList(m.homeGeographies)).toEqual(["Amsterdam, NL", "Berlin, DE", "Lisbon, PT"]);
+  });
+
+  it("de-duplicates case-insensitively, keeping the first spelling", () => {
+    const m = mergeProfilesForCatalogue([irmak, julia]);
+    expect(parseList(m.homeGeographies)).toContain("Amsterdam, NL");
+    expect(parseList(m.homeGeographies)).not.toContain("amsterdam, nl");
+  });
+
+  it("does not split an entry containing a comma", () => {
+    // Same trap parseList exists for: "Amsterdam, NL" is one place, not two.
+    const m = mergeProfilesForCatalogue([irmak]);
+    expect(parseList(m.homeGeographies)).toEqual(["Amsterdam, NL", "Berlin, DE"]);
+  });
+
+  it("unions exclusions and private keywords too", () => {
+    const m = mergeProfilesForCatalogue([irmak, julia]);
+    expect(parseList(m.excludedDomains)).toEqual(["crypto trading", "pure sales webinars"]);
+    expect(parseList(m.privateKeywords)).toEqual(["nomad", "family"]);
+  });
+
+  it("drops the person entirely — a catalogue pass has no speaker", () => {
+    // A merged persona would be a fiction the prompt then reasons about.
+    const m = mergeProfilesForCatalogue([irmak, julia]);
+    expect(m.fullName).toBe("");
+    expect(m.bioShort).toBe("");
+    expect(m.credentials).toBe("");
+    expect(m.speakingLevel).toBe("");
+  });
+
+  it("keeps every distinct employer angle, since each speaker has their own", () => {
+    const m = mergeProfilesForCatalogue([irmak, julia]);
+    expect(m.employerAngle).toBe("Coder sells remote dev environments.");
+  });
+
+  it("returns an empty profile when no speaker has one yet", () => {
+    expect(mergeProfilesForCatalogue([])).toEqual(EMPTY_PROFILE);
+  });
+
+  it("is order-stable, so the same speakers give the same prompt", () => {
+    expect(mergeProfilesForCatalogue([irmak, julia])).toEqual(mergeProfilesForCatalogue([irmak, julia]));
+  });
+});
+
+describe("buildCatalogueScope", () => {
+  const merged = mergeProfilesForCatalogue([
+    { ...EMPTY_PROFILE, signatureTopics: "Applied AI", homeGeographies: "Amsterdam, NL", speakingLevel: "KEYNOTE" },
+  ]);
+
+  it("names the topics and places in scope", () => {
+    const out = buildCatalogueScope(merged);
+    expect(out).toContain("Applied AI");
+    expect(out).toContain("Amsterdam, NL");
+  });
+
+  it("tells the model not to judge anything", () => {
+    // The bug being fixed: discovery scoring everyone against one brief.
+    const out = buildCatalogueScope(merged);
+    expect(out).toContain("Do NOT rate, rank, score or recommend");
+  });
+
+  it("carries no rubric and no speaking level", () => {
+    const out = buildCatalogueScope(merged);
+    expect(out).not.toContain("KEYNOTE");
+    expect(out.toLowerCase()).not.toContain("0-100");
+  });
+
+  it("stays coherent with no profiles at all", () => {
+    const out = buildCatalogueScope(EMPTY_PROFILE);
+    expect(out).toContain("any technology, AI, startup or founder topic");
+    expect(out).toContain("anywhere, plus online");
   });
 });
