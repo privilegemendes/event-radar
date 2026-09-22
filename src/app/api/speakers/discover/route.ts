@@ -55,7 +55,7 @@ type RawSpeaker = {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const body = await request.json().catch(() => ({})) as { eventIds?: string[] };
     const today = new Date();
     const todayStart = new Date(today.toDateString());
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       `#${i + 1}: "${e.title}" | ${e.location ?? (e.region ?? "location?")} | ${e.startDate ? new Date(e.startDate).toISOString().slice(0, 10) : "date?"} | ${e.url ?? "no url"}${e.otherSpeakers ? ` | known: ${e.otherSpeakers}` : ""}`
     ).join("\n");
 
-    const profile = await getApplicantProfile();
+    const profile = await getApplicantProfile(session.userId);
     const speakerBlock = buildSpeakerProfile(profile, "outreach");
     const name = speakerName(profile);
     const topics = parseList(profile.signatureTopics);

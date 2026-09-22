@@ -115,7 +115,7 @@ export async function POST() {
   const baseUrl = process.env.ANTHROPIC_BASE_URL, authToken = process.env.ANTHROPIC_AUTH_TOKEN;
   if (!baseUrl || !authToken) return NextResponse.json({ error: "LLM not configured" }, { status: 503 });
 
-  const profile = await getApplicantProfile();
+  const profile = await getApplicantProfile(session.userId);
   const name = speakerName(profile);
   const hasEmployerAngle = !!(profile.employerAngle ?? "").trim();
 

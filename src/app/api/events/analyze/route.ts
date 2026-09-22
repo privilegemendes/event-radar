@@ -54,7 +54,10 @@ export async function POST() {
     if (!baseUrl || !authToken)
       return NextResponse.json({ error: "Anthropic credentials not configured" }, { status: 503 });
 
-    const profile = await getApplicantProfile();
+    /* This speaker's brief: the upsert below writes session.userId's own
+       opportunity rows, so scoring them against the owner's brief put one
+       person's judgement under another person's name. */
+    const profile = await getApplicantProfile(session.userId);
     const speakerBlock = buildSpeakerProfile(profile, "full");
     const rubricBlock = buildScoringRubric(profile);
 
