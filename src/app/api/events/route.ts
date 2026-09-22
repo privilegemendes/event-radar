@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { requireSession, requireAdmin, authErrorResponse } from "@/lib/session";
 import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
-import { isOwner } from "@/lib/owner";
 import { mergeEventWithOpportunity, OPPORTUNITY_WIRE_FIELDS } from "@/lib/opportunity";
+import { speakerConditions } from "@/lib/event-filter";
 
 /**
  * Named data contracts for the list endpoint. This route returns every matching
@@ -60,16 +60,12 @@ export async function GET(request: NextRequest) {
     const view   = searchParams.get("view");
 
     const where: Record<string, unknown> = {};
-    // Owner-only (nomad) events are hidden from everyone except the owner.
-    if (!isOwner(session)) where.ownerOnly = false;
-    if (status) where.status = status;
+
+    /* Objective facts about the event itself stay on Event. */
     if (type)   where.type   = type;
-    if (coderRelevant === "true")  where.coderRelevant = true;
-    if (coderRelevant === "false") where.coderRelevant = false;
     if (isCoderEvent  === "true")  where.isCoderEvent  = true;
     if (isCoderEvent  === "false") where.isCoderEvent  = false;
     if (region) where.region = region;
-    if (category) where.category = category;
     if (search) {
       where.OR = [
         { title:       { contains: search } },
@@ -77,15 +73,20 @@ export async function GET(request: NextRequest) {
         { location:    { contains: search } },
       ];
     }
-    // The podium view is the only one that also narrows rows: it renders accepted
-    // or attended gigs that have not happened yet. Uses AND so it composes with
-    // the OR that `search` may already have set.
+
+    /* Everything per-speaker — status, category, employer relevance, privacy,
+       the podium's accepted/attending test — is filtered through THIS
+       speaker's opportunity row. These used to read the Event columns, which
+       stopped being updated when Phase 2 moved the writes; see
+       src/lib/event-filter.ts. */
+    const and: unknown[] = speakerConditions(session.userId, { status, category, coderRelevant, view });
+
     if (view === "podium") {
-      where.AND = [
-        { OR: [{ status: { in: ["ACCEPTED", "SPOKEN"] } }, { attending: true }] },
-        { OR: [{ startDate: null }, { startDate: { gte: new Date() } }] },
-      ];
+      // The date half is a fact about the event, so it stays here.
+      and.push({ OR: [{ startDate: null }, { startDate: { gte: new Date() } }] });
     }
+
+    where.AND = and;
 
     const orderBy: Prisma.EventOrderByWithRelationInput[] = [
       { startDate: { sort: "asc", nulls: "last" } },
