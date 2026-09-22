@@ -2,6 +2,8 @@ import {
   mine,
   notPrivateToOthers,
   speakerConditions,
+  badgeCountWhere,
+  upcomingOrUndated,
   NO_ROW_STATUS,
 } from "./event-filter";
 
@@ -114,5 +116,74 @@ describe("speakerConditions", () => {
     for (const c of speakerConditions(ME, { status: NO_ROW_STATUS, view: "podium" })) {
       expect(Object.keys(c)).toHaveLength(1);
     }
+  });
+});
+
+/* ── Badge counts must match the page behind them ─────────────────────────
+ * The sidebar's numbers were built from their own hand-written predicates and
+ * had drifted from the list endpoint's in three ways. Each of these pins one
+ * difference that was live.
+ */
+
+describe("upcomingOrUndated", () => {
+  const NOW = new Date("2026-09-22T12:00:00Z");
+
+  it("keeps undated events", () => {
+    // A recurring meetup with no date is still ahead of you.
+    expect(upcomingOrUndated(NOW).OR).toContainEqual({ startDate: null });
+  });
+
+  it("keeps events from now onward", () => {
+    expect(upcomingOrUndated(NOW).OR).toContainEqual({ startDate: { gte: NOW } });
+  });
+});
+
+describe("badgeCountWhere", () => {
+  const ME = "user_me";
+  const NOW = new Date("2026-09-22T12:00:00Z");
+
+  it("gives the podium badge the date window the page has", () => {
+    // The reported bug: an ACCEPTED gig dated three days ago kept its badge
+    // while the page it linked to was empty.
+    const where = badgeCountWhere(ME, "podium", NOW);
+    const conds = where.AND as Record<string, unknown>[];
+    expect(conds).toContainEqual(upcomingOrUndated(NOW));
+  });
+
+  it("counts SPOKEN as well as ACCEPTED, like the page", () => {
+    // The badge counted ACCEPTED only, so a SPOKEN gig showed on the page and
+    // not in the number above it.
+    expect(JSON.stringify(badgeCountWhere(ME, "podium", NOW))).toContain("SPOKEN");
+  });
+
+  it("counts an unjudged event in the inbox badge, like the page", () => {
+    // A speaker who has never been scored has no opportunity rows at all. The
+    // old count read those rows directly and returned 0 behind a full inbox —
+    // which every account created through open sign-up would have hit.
+    const where = badgeCountWhere(ME, "inbox", NOW);
+    expect(JSON.stringify(where)).toContain('"none"');
+  });
+
+  it("uses the same privacy rule as the page", () => {
+    // The old count hid a speaker's own private events from their own badge
+    // unless they were the owner; the page shows them.
+    for (const badge of ["inbox", "podium"] as const) {
+      expect(badgeCountWhere(ME, badge, NOW)).toEqual(
+        expect.objectContaining({ AND: expect.arrayContaining([notPrivateToOthers(ME)]) }),
+      );
+    }
+  });
+
+  it("builds the podium count from exactly the page's conditions plus the date", () => {
+    // Stated as an equality so the two cannot drift again silently.
+    expect(badgeCountWhere(ME, "podium", NOW)).toEqual({
+      AND: [...speakerConditions(ME, { view: "podium" }), upcomingOrUndated(NOW)],
+    });
+  });
+
+  it("builds the inbox count from exactly the page's conditions", () => {
+    expect(badgeCountWhere(ME, "inbox", NOW)).toEqual({
+      AND: speakerConditions(ME, { status: "DISCOVERED" }),
+    });
   });
 });

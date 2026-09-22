@@ -87,11 +87,60 @@ export function speakerConditions(userId: string, params: EventFilterParams): Co
   }
 
   if (params.view === "podium") {
-    // Accepted or attended gigs that have not happened yet. Both halves are
-    // this speaker's own — another speaker's acceptance must not pull an event
-    // onto my podium.
-    out.push(mine(userId, { OR: [{ status: { in: ["ACCEPTED", "SPOKEN"] } }, { attending: true }] }, false));
+    // Accepted or attended gigs. Both halves are this speaker's own — another
+    // speaker's acceptance must not pull an event onto my podium.
+    out.push(mine(userId, { OR: [{ status: { in: PODIUM_STATUSES } }, { attending: true }] }, false));
   }
 
   return out;
+}
+
+/**
+ * Statuses that put an event on the podium.
+ *
+ * Named because two call sites need the same set, and the sidebar badge and the
+ * podium page had already drifted apart on it — the badge counted ACCEPTED
+ * only, so a SPOKEN gig would have shown on the page and not in the count.
+ */
+export const PODIUM_STATUSES = ["ACCEPTED", "SPOKEN"] as const;
+
+/**
+ * The podium's date window: not yet happened, or no date at all.
+ *
+ * A fact about the event rather than about anyone's opinion of it, so it is a
+ * plain Event condition rather than something routed through an opportunity.
+ *
+ * This is the half the sidebar badge was missing. The podium means "gigs still
+ * ahead of me"; without the window a gig that happened last week keeps its
+ * badge forever, and the page it links to is empty.
+ */
+export function upcomingOrUndated(now: Date = new Date()): Condition {
+  return { OR: [{ startDate: null }, { startDate: { gte: now } }] };
+}
+
+/**
+ * The complete `where` for one of the sidebar's badge counts.
+ *
+ * The badges exist to tell a speaker how many rows the page behind them holds.
+ * They were built from their own hand-written predicates, and every difference
+ * between those and the page's showed up as a badge that lied:
+ *
+ *   - podium: no date window, so a gig three days past still counted
+ *   - inbox:  counted only existing opportunity rows, so a speaker who has
+ *             never been scored saw a full inbox behind a badge of 0
+ *   - both:   an older privacy rule that hid a speaker's own private events
+ *             from their own badge while the page showed them
+ *
+ * Sharing speakerConditions is what stops that recurring: one predicate, used
+ * by the list and the count, so they cannot disagree.
+ */
+export function badgeCountWhere(
+  userId: string,
+  badge: "inbox" | "podium",
+  now: Date = new Date(),
+): Condition {
+  if (badge === "inbox") {
+    return { AND: speakerConditions(userId, { status: NO_ROW_STATUS }) };
+  }
+  return { AND: [...speakerConditions(userId, { view: "podium" }), upcomingOrUndated(now)] };
 }

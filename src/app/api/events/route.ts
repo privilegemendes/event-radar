@@ -4,7 +4,7 @@ import { requireSession, requireAdmin, authErrorResponse } from "@/lib/session";
 import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { mergeEventWithOpportunity, OPPORTUNITY_WIRE_FIELDS } from "@/lib/opportunity";
-import { speakerConditions } from "@/lib/event-filter";
+import { speakerConditions, upcomingOrUndated } from "@/lib/event-filter";
 
 /**
  * Named data contracts for the list endpoint. This route returns every matching
@@ -82,8 +82,10 @@ export async function GET(request: NextRequest) {
     const and: unknown[] = speakerConditions(session.userId, { status, category, coderRelevant, view });
 
     if (view === "podium") {
-      // The date half is a fact about the event, so it stays here.
-      and.push({ OR: [{ startDate: null }, { startDate: { gte: new Date() } }] });
+      // The date half is a fact about the event, so it is not routed through an
+      // opportunity — but it is shared with the sidebar's badge count, which
+      // previously omitted it and counted gigs that had already happened.
+      and.push(upcomingOrUndated());
     }
 
     where.AND = and;
