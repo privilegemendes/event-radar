@@ -95,3 +95,22 @@ export function speakerConditions(userId: string, params: EventFilterParams): Co
 
   return out;
 }
+
+/**
+ * The query behind the sidebar's "to triage" badge.
+ *
+ * It counts **events**, not `EventOpportunity` rows, and that is the whole
+ * point. `speakerConditions` matches an event for the inbox either when this
+ * speaker's opportunity is DISCOVERED *or* when they have no row at all (see
+ * `NO_ROW_STATUS`); a count over `EventOpportunity` can only ever see the first
+ * half of that. So a speaker who has never been scored — seven of the eight
+ * accounts in the dev database — got a badge reading 0 above an inbox page
+ * listing 1321 events.
+ *
+ * Built from `speakerConditions` with the same params `/inbox` sends
+ * (`?status=DISCOVERED`) rather than a second hand-rolled predicate, so the
+ * badge and the list cannot drift apart again.
+ */
+export function inboxCountWhere(userId: string): Condition {
+  return { AND: speakerConditions(userId, { status: NO_ROW_STATUS }) };
+}

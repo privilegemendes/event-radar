@@ -2,6 +2,7 @@ import {
   mine,
   notPrivateToOthers,
   speakerConditions,
+  inboxCountWhere,
   NO_ROW_STATUS,
 } from "./event-filter";
 
@@ -114,5 +115,36 @@ describe("speakerConditions", () => {
     for (const c of speakerConditions(ME, { status: NO_ROW_STATUS, view: "podium" })) {
       expect(Object.keys(c)).toHaveLength(1);
     }
+  });
+});
+
+describe("inboxCountWhere", () => {
+  const and = inboxCountWhere(ME).AND as Record<string, unknown>[];
+
+  it("is the inbox list's own conditions, AND-ed", () => {
+    // Same helper, same params `/inbox` sends. The badge and the page it links
+    // to disagreed because the badge had a predicate of its own.
+    expect(inboxCountWhere(ME)).toEqual({ AND: speakerConditions(ME, { status: NO_ROW_STATUS }) });
+  });
+
+  it("matches events this speaker has no opportunity row for", () => {
+    // The half a count over EventOpportunity cannot reach, and the reason the
+    // badge read 0 for every speaker who had never been scored.
+    const [, status] = and;
+    expect(branches(status)).toContainEqual({ opportunities: { none: { userId: ME } } });
+  });
+
+  it("matches this speaker's own DISCOVERED rows", () => {
+    const [, status] = and;
+    expect(branches(status)).toContainEqual({ opportunities: { some: { userId: ME, status: NO_ROW_STATUS } } });
+  });
+
+  it("still excludes what another speaker marked private", () => {
+    expect(and).toContainEqual(notPrivateToOthers(ME));
+  });
+
+  it("never reaches another speaker's row", () => {
+    const json = JSON.stringify(inboxCountWhere(ME));
+    expect(json.match(new RegExp(ME, "g"))).toHaveLength(3); // privacy NOT + the two status branches
   });
 });
