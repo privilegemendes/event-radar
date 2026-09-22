@@ -92,3 +92,24 @@ export const EMPTY_PROFILE: ApplicantProfile = {
   privateKeywords: "",
   rubricOverride: "",
 };
+
+/**
+ * Project a SpeakerProfile database row onto the ApplicantProfile shape.
+ *
+ * Whitelists by the known keys rather than spreading the row, so a column added
+ * to the table but not to this interface cannot leak into the prompts — and a
+ * missing or non-string column falls back to "" instead of undefined, which
+ * would render as the literal "undefined" in a prompt.
+ *
+ * Pure, and free of the server-only/Prisma imports in settings.ts, so it can be
+ * unit-tested.
+ */
+export function profileFromRow(row: Record<string, unknown> | null | undefined): ApplicantProfile {
+  const out = { ...EMPTY_PROFILE };
+  if (!row) return out;
+  for (const key of Object.keys(EMPTY_PROFILE) as (keyof ApplicantProfile)[]) {
+    const v = row[key];
+    if (typeof v === "string") out[key] = v;
+  }
+  return out;
+}
