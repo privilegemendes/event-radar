@@ -49,8 +49,9 @@ model User {
   /// cannot be added NOT NULL to a table that already has rows.
   updatedAt          DateTime @default(now()) @updatedAt
 
-  sessions Session[]
-  accounts Account[]
+  sessions       Session[]
+  accounts       Account[]
+  speakerProfile SpeakerProfile?
 
   /// NOTE: the Better Auth CLI writes `@@map("user")` here. It is removed on
   /// purpose — this table already exists as "User" with data, and the map would
@@ -213,4 +214,50 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+/// One speaker's brief: who they are, and what discovery should look for.
+///
+/// Phase 0 of the per-speaker split. Previously a single global JSON blob in
+/// AppSetting["applicant_profile"], which allowed exactly one speaker for the
+/// whole installation. Keyed by user now so a second speaker is a row rather
+/// than a schema change — but nothing reads it per-session yet: the accessors
+/// still resolve the owner's profile, so behaviour is unchanged until Phase 2.
+///
+/// Fields are columns rather than JSON so they are queryable and typed; adding
+/// a brief field is a migration, which is the intended trade.
+model SpeakerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // ── Applicant fields (fill in CFP forms) ──
+  fullName    String @default("")
+  jobTitle    String @default("")
+  company     String @default("")
+  email       String @default("")
+  phone       String @default("")
+  location    String @default("")
+  linkedin    String @default("")
+  twitter     String @default("")
+  website     String @default("")
+  headshotUrl String @default("")
+  bioShort    String @default("")
+  bioLong     String @default("")
+  talkTopics  String @default("")
+  dietary     String @default("")
+  pronouns    String @default("")
+
+  // ── Speaker brief (steers AI discovery, scoring and pitches) ──
+  speakingLevel   String @default("")
+  signatureTopics String @default("")
+  homeGeographies String @default("")
+  credentials     String @default("")
+  employerAngle   String @default("")
+  excludedDomains String @default("")
+  privateKeywords String @default("")
+  rubricOverride  String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }

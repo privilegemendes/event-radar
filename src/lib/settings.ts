@@ -1,12 +1,15 @@
 import "server-only";
 import { db } from "./db";
-import { EMPTY_PROFILE, type ApplicantProfile } from "./profile-schema";
+import { EMPTY_PROFILE, profileFromRow, type ApplicantProfile } from "./profile-schema";
+import { OWNER_EMAIL } from "./owner";
 
 export * from "./profile-schema";
 
 /**
- * Simple key/value settings store backed by the AppSetting table.
- * Used for the single-user Applicant Profile and the (secret) calendar ICS URL.
+ * Key/value settings store backed by the AppSetting table.
+ *
+ * Still holds the calendar ICS URL and the auto-discovery toggle. The speaker
+ * brief moved out to its own table — see getApplicantProfile below.
  */
 
 export const SETTINGS_KEYS = {
@@ -28,14 +31,57 @@ export async function setSetting(key: string, value: string): Promise<void> {
   });
 }
 
-export async function getApplicantProfile(): Promise<ApplicantProfile> {
-  const raw = await getSetting(SETTINGS_KEYS.applicantProfile);
-  if (!raw) return { ...EMPTY_PROFILE };
-  try {
-    return { ...EMPTY_PROFILE, ...(JSON.parse(raw) as Partial<ApplicantProfile>) };
-  } catch {
-    return { ...EMPTY_PROFILE };
+/**
+ * Read the speaker brief.
+ *
+ * Phase 0 of the per-speaker split: storage moved from a single JSON blob in
+ * AppSetting to the SpeakerProfile table, keyed by user. Behaviour is
+ * deliberately unchanged — with no argument this still resolves the OWNER's
+ * profile, which is the only one that exists today, so every existing caller
+ * keeps working without being touched.
+ *
+ * Phase 2 is what makes callers pass the session user; until then `userId` is
+ * an opt-in used only by tests and the backfill.
+ */
+export async function getApplicantProfile(userId?: string): Promise<ApplicantProfile> {
+  const row = userId
+    ? await db.speakerProfile.findUnique({ where: { userId } })
+    : await db.speakerProfile.findFirst({ where: { user: { email: OWNER_EMAIL } } });
+
+  return profileFromRow(row as unknown as Record<string, unknown> | null);
+}
+
+/**
+ * Write the speaker brief. Creates the row on first save.
+ *
+ * As above, no userId means the owner — the single speaker that exists today.
+ */
+export async function setApplicantProfile(
+  profile: ApplicantProfile,
+  userId?: string,
+): Promise<ApplicantProfile> {
+  const targetId =
+    userId ??
+    (await db.user.findUnique({ where: { email: OWNER_EMAIL }, select: { id: true } }))?.id;
+
+  if (!targetId) {
+    throw new Error(
+      `No user to attach the speaker profile to (looked for OWNER_EMAIL=${OWNER_EMAIL}).`,
+    );
   }
+
+  const data: Record<string, string> = {};
+  for (const key of Object.keys(EMPTY_PROFILE) as (keyof ApplicantProfile)[]) {
+    data[key] = typeof profile[key] === "string" ? profile[key] : "";
+  }
+
+  await db.speakerProfile.upsert({
+    where: { userId: targetId },
+    create: { userId: targetId, ...data },
+    update: data,
+  });
+
+  return getApplicantProfile(targetId);
 }
 
 /**
