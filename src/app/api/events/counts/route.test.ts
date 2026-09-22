@@ -101,6 +101,22 @@ describe("GET /api/events/counts", () => {
     expect((await body()).gigs).toBe(0);
   });
 
+  it("bounds the gigs badge at today, as /podiums does", async () => {
+    // The badge read 1 above a page listing 0, because it counted a gig that
+    // had already happened. The bound reaches startDate through the relation.
+    await GET();
+    const [{ where }] = oppCount.mock.calls[0] as [{ where: { event?: { OR: Record<string, unknown>[] } } }];
+    expect(where.event).toBeDefined(); // the bound is reached through the relation
+
+    // Compared by shape and not against a second upcomingOrDateless() call:
+    // both mint their own `new Date()`, so a literal toEqual passes or fails on
+    // whether the clock ticked between them.
+    const [dateless, dated] = where.event!.OR;
+    expect(dateless).toEqual({ startDate: null });
+    const gte = (dated.startDate as { gte: Date }).gte;
+    expect(Math.abs(gte.getTime() - Date.now())).toBeLessThan(1000);
+  });
+
   it("leaves the Coder Events badge an event-level count", async () => {
     await GET();
     expect(eventCount).toHaveBeenCalledWith({

@@ -4,7 +4,7 @@ import { requireSession, requireAdmin, authErrorResponse } from "@/lib/session";
 import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { mergeEventWithOpportunity, OPPORTUNITY_WIRE_FIELDS } from "@/lib/opportunity";
-import { speakerConditions } from "@/lib/event-filter";
+import { speakerConditions, upcomingOrDateless } from "@/lib/event-filter";
 
 /**
  * Named data contracts for the list endpoint. This route returns every matching
@@ -82,8 +82,10 @@ export async function GET(request: NextRequest) {
     const and: unknown[] = speakerConditions(session.userId, { status, category, coderRelevant, view });
 
     if (view === "podium") {
-      // The date half is a fact about the event, so it stays here.
-      and.push({ OR: [{ startDate: null }, { startDate: { gte: new Date() } }] });
+      // The date half is a fact about the event, so it stays here rather than
+      // in speakerConditions — but it is shared with the gigs badge, which has
+      // to apply the same bound to agree with this page.
+      and.push(upcomingOrDateless());
     }
 
     where.AND = and;

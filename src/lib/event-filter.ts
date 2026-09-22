@@ -114,3 +114,16 @@ export function speakerConditions(userId: string, params: EventFilterParams): Co
 export function inboxCountWhere(userId: string): Condition {
   return { AND: speakerConditions(userId, { status: NO_ROW_STATUS }) };
 }
+
+/**
+ * The podium's date bound: gigs that have not happened yet.
+ *
+ * A fact about the event, not about anyone's opinion of it, so it is not part
+ * of `speakerConditions` — the list route ANDs it onto the Event where, and the
+ * counts route nests it under `event:` to reach it from an opportunity. It is a
+ * function rather than a constant because `new Date()` has to be evaluated per
+ * request, not once at module load.
+ */
+export function upcomingOrDateless(): Condition {
+  return { OR: [{ startDate: null }, { startDate: { gte: new Date() } }] };
+}

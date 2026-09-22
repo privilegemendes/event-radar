@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession, authErrorResponse } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
-import { inboxCountWhere } from "@/lib/event-filter";
+import { inboxCountWhere, upcomingOrDateless } from "@/lib/event-filter";
 
 /**
  * Badge counts for the sidebar.
@@ -25,13 +25,23 @@ export async function GET() {
 
        The gigs badge stays an EventOpportunity count: ACCEPTED and attending
        are not what a missing row defaults to, so there is no no-row half to
-       miss, and the podium's own filter agrees by passing matchesDefault=false. */
+       miss, and the podium's own filter agrees by passing matchesDefault=false.
+       It does take /podiums' date bound, reached through the relation because
+       startDate is a fact about the event — without it the badge counted gigs
+       that have already happened and stood above a page that lists none. */
     const mine = { userId: session.userId };
     const visible = isOwner(session) ? {} : { private: false };
 
     const [inbox, gigs] = await Promise.all([
       db.event.count({ where: inboxCountWhere(session.userId) }),
-      db.eventOpportunity.count({ where: { ...mine, ...visible, OR: [{ status: "ACCEPTED" }, { attending: true }] } }),
+      db.eventOpportunity.count({
+        where: {
+          ...mine,
+          ...visible,
+          OR: [{ status: "ACCEPTED" }, { attending: true }],
+          event: upcomingOrDateless(),
+        },
+      }),
     ]);
 
     /* Coder Events stays an Event-level count: it is a property of the event

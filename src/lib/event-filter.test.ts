@@ -3,6 +3,7 @@ import {
   notPrivateToOthers,
   speakerConditions,
   inboxCountWhere,
+  upcomingOrDateless,
   NO_ROW_STATUS,
 } from "./event-filter";
 
@@ -146,5 +147,28 @@ describe("inboxCountWhere", () => {
   it("never reaches another speaker's row", () => {
     const json = JSON.stringify(inboxCountWhere(ME));
     expect(json.match(new RegExp(ME, "g"))).toHaveLength(3); // privacy NOT + the two status branches
+  });
+});
+
+describe("upcomingOrDateless", () => {
+  it("keeps gigs with no date at all", () => {
+    // A gig with no startDate yet is still ahead of you, not behind.
+    expect(branches(upcomingOrDateless())).toContainEqual({ startDate: null });
+  });
+
+  it("bounds the rest at now", () => {
+    const [, dated] = branches(upcomingOrDateless());
+    const gte = (dated.startDate as { gte: Date }).gte;
+    expect(gte).toBeInstanceOf(Date);
+    expect(Math.abs(gte.getTime() - Date.now())).toBeLessThan(1000);
+  });
+
+  it("re-reads the clock on every call", async () => {
+    // A module-level constant would freeze `now` at import and drift further
+    // out of date for as long as the server process lives.
+    const first = (branches(upcomingOrDateless())[1].startDate as { gte: Date }).gte;
+    await new Promise((r) => setTimeout(r, 5));
+    const second = (branches(upcomingOrDateless())[1].startDate as { gte: Date }).gte;
+    expect(second.getTime()).toBeGreaterThan(first.getTime());
   });
 });
