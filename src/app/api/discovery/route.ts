@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin, authErrorResponse } from "@/lib/session";
+import { requireSession, requireAdmin, authErrorResponse } from "@/lib/session";
 import { runDiscovery } from "@/lib/discovery";
 
 export const maxDuration = 300;
 
 export async function GET() {
   try {
-    // Public read: last discovery run is viewable without login.
+    await requireSession();
     const lastRun = await db.discoveryRun.findFirst({ orderBy: { startedAt: "desc" } });
     return NextResponse.json(lastRun);
   } catch (err) {

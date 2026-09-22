@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession, authErrorResponse } from "@/lib/session";
+import { requireSession, getSession, authErrorResponse } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
 
 /**
@@ -12,7 +12,7 @@ import { isOwner } from "@/lib/owner";
  */
 export async function GET() {
   try {
-    // Public read. Same visibility rule as GET /api/events: owner-only events
+    await requireSession();
     // are hidden from everyone except the owner.
     const visible = isOwner(await getSession()) ? {} : { ownerOnly: false };
 

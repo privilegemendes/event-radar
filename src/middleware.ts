@@ -29,12 +29,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const requiresAuth =
-    pathname.startsWith("/podiums") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/change-password");
+  /* API routes are never redirected. They enforce their own guards and answer
+     401 with JSON; a redirect would send a fetch() to an HTML login page, which
+     it would then fail to parse — a confusing error instead of a clear one. */
+  if (pathname.startsWith("/api/")) return NextResponse.next();
 
-  if (requiresAuth && !getSessionCookie(request)) {
+  /* Every page requires a session now — reads are no longer public. The
+     always-public paths above (login, /api/auth, static assets) are the only
+     exceptions, so anything reaching here is app UI.
+
+     Still only a cookie-existence check, not validation: this is a redirect
+     hint that saves an anonymous visitor a wasted round trip. Authorization is
+     enforced server-side in the API routes and in the owner-only Podium
+     layout. */
+  if (!getSessionCookie(request)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

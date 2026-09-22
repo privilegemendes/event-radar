@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin, authErrorResponse } from "@/lib/session";
+import { requireSession, requireAdmin, authErrorResponse } from "@/lib/session";
 
 export async function GET() {
   try {
-    // Public read: viewing is open.
+    await requireSession();
     const partners = await db.partner.findMany({
       include: { _count: { select: { events: true } } },
       orderBy: { name: "asc" },

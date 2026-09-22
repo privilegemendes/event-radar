@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin, getSession, authErrorResponse } from "@/lib/session";
+import { requireSession, requireAdmin, getSession, authErrorResponse } from "@/lib/session";
 import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { isOwner } from "@/lib/owner";
@@ -46,7 +46,7 @@ const VIEWS: Record<string, Prisma.EventSelect> = {
 
 export async function GET(request: NextRequest) {
   try {
-    // Public read: viewing is open to anyone who can reach the app.
+    await requireSession();
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get("status") as EventStatus | null;
