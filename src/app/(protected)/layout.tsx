@@ -6,7 +6,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   // Viewing is open to anyone who can reach the app (gated by the Coder proxy).
   // Editing requires an admin session; the UI hides write controls for guests/viewers.
   const session = await getSession();
-  const role = session?.role ?? "VIEWER";
+  const role = session?.role ?? "MEMBER";
 
   return (
     <div className="flex h-screen overflow-hidden bg-coder-bg">

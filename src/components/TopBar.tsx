@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 interface TopBarProps {
   name: string;
   email: string;
-  role: "ADMIN" | "VIEWER";
+  role: "ADMIN" | "MEMBER";
   mustChangePassword: boolean;
   isGuest?: boolean;
 }

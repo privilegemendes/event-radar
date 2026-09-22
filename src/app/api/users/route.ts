@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       email: string;
       name: string;
       password: string;
-      role: "ADMIN" | "VIEWER";
+      role: "ADMIN" | "MEMBER";
     };
 
     if (!body.email || !body.name || !body.password) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         email: body.email.toLowerCase(),
         name: body.name,
         passwordHash,
-        role: body.role ?? "VIEWER",
+        role: body.role ?? "MEMBER",
         mustChangePassword: true,
       },
       select: { id: true, email: true, name: true, role: true, createdAt: true },

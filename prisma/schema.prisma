@@ -10,7 +10,7 @@ datasource db {
 
 enum Role {
   ADMIN
-  VIEWER
+  MEMBER
 }
 
 enum EventType {
@@ -35,7 +35,7 @@ model User {
   email              String   @unique
   passwordHash       String
   name               String
-  role               Role     @default(VIEWER)
+  role               Role     @default(MEMBER)
   mustChangePassword Boolean  @default(false)
   createdAt          DateTime @default(now())
 }

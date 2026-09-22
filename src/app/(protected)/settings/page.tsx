@@ -4,7 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import ProfileCalendarSettings from "@/components/ProfileCalendarSettings";
 
 interface User {
-  id: string; email: string; name: string; role: "ADMIN" | "VIEWER";
+  id: string; email: string; name: string; role: "ADMIN" | "MEMBER";
   mustChangePassword: boolean; createdAt: string;
 }
 
@@ -19,7 +19,7 @@ export default function SettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
-  const [nu, setNu] = useState({ email: "", name: "", password: "", role: "VIEWER" as "ADMIN" | "VIEWER" });
+  const [nu, setNu] = useState({ email: "", name: "", password: "", role: "MEMBER" as "ADMIN" | "MEMBER" });
   const [adding,   setAdding]   = useState(false);
   const [addError, setAddError] = useState("");
 
@@ -38,7 +38,7 @@ export default function SettingsPage() {
     const res = await fetch("/api/users", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(nu),
     });
-    if (res.ok) { await load(); setNu({ email: "", name: "", password: "", role: "VIEWER" }); setShowAdd(false); }
+    if (res.ok) { await load(); setNu({ email: "", name: "", password: "", role: "MEMBER" }); setShowAdd(false); }
     else { const d = (await res.json()) as { error?: string }; setAddError(d.error ?? "Failed"); }
     setAdding(false);
   };
@@ -101,8 +101,8 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className={labelCls}>Role</label>
-                  <select className={inputCls} value={nu.role} onChange={(e) => setNu((p) => ({ ...p, role: e.target.value as "ADMIN" | "VIEWER" }))}>
-                    <option value="VIEWER">VIEWER</option>
+                  <select className={inputCls} value={nu.role} onChange={(e) => setNu((p) => ({ ...p, role: e.target.value as "ADMIN" | "MEMBER" }))}>
+                    <option value="MEMBER">MEMBER</option>
                     <option value="ADMIN">ADMIN</option>
                   </select>
                 </div>
