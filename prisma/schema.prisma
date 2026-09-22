@@ -52,6 +52,7 @@ model User {
   sessions       Session[]
   accounts       Account[]
   speakerProfile SpeakerProfile?
+  opportunities  EventOpportunity[]
 
   /// NOTE: the Better Auth CLI writes `@@map("user")` here. It is removed on
   /// purpose — this table already exists as "User" with data, and the map would
@@ -133,6 +134,8 @@ model Event {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  opportunities EventOpportunity[]
 }
 
 model Speaker {
@@ -260,4 +263,60 @@ model SpeakerProfile {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+}
+
+/// One speaker's view of one event.
+///
+/// Phase 1 of the per-speaker split. These columns live on Event today, which
+/// means the catalogue stores a single speaker's opinion of each event and a
+/// second speaker cannot hold their own without overwriting it.
+///
+/// Nothing reads this table yet — the Event columns remain authoritative until
+/// Phase 2 switches the reads. It exists so the migrated data can be inspected
+/// before anything depends on it.
+model EventOpportunity {
+  id      String @id @default(cuid())
+  userId  String
+  eventId String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // ── Scoring: this speaker's fit for this event ──
+  relevancyScore       Int?
+  relevancyRationale   String?
+  acceptanceLikelihood String? // HIGH | MEDIUM | LOW
+  acceptanceRationale  String?
+  suggestedAction      String? // ATTEND | APPLY_TO_SPEAK | BOTH
+
+  /// ATTEND | PARTICIPATE | SPEAK. Per speaker, not per event: the same
+  /// conference is a SPEAK for one person and an ATTEND for another.
+  category String?
+
+  /// Renamed from Event.coderRelevant. It has been derived from the speaker's
+  /// own employerAngle since the brief became configurable, so it follows the
+  /// speaker; only isCoderEvent and the partner link are truly employer data.
+  employerRelevant Boolean @default(false)
+
+  // ── Pipeline ──
+  status     EventStatus @default(DISCOVERED)
+  pitchDraft String?
+  followUpAt DateTime?
+
+  // ── Personal tracking ──
+  attending   Boolean @default(false)
+  readiness   String? // JSON: { [checklistKey]: boolean }
+  prepStage   String?
+  customTasks String? // JSON: [{id, label, done}]
+
+  /// Renamed from Event.ownerOnly. Once opportunities belong to people,
+  /// "owner-only" is just "this speaker's row", so the flag only has to say
+  /// whether they want it hidden from a shared view.
+  private Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
 }

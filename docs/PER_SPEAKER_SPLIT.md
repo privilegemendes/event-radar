@@ -48,12 +48,18 @@ Expand / migrate / contract. Each ships independently; nothing breaks between.
 | Phase | What | Reversible |
 |---|---|---|
 | **0 — DONE** | `SpeakerProfile` table; brief moves out of `AppSetting` JSON. No `Event` changes; accessors still resolve the owner, so behaviour is unchanged. | Yes |
-| 1 | Add `EventOpportunity`, backfill ~1,326 rows for Irmak. `Event` columns stay authoritative; nothing reads the new table yet. | Yes |
+| **1 — DONE (local)** | `EventOpportunity` added and backfilled. `Event` columns stay authoritative; nothing reads the new table yet. Two renames land here: `coderRelevant` → `employerRelevant` (it follows the speaker's own `employerAngle`) and `ownerOnly` → `private`. | Yes |
 | 2 | Switch reads/writes to `EventOpportunity`, scoped to the session user. **The big one** — 20 files, ~300 references. | Yes (revert code) |
 | 3 | Drop the moved columns from `Event`. | **No** |
 | 4 | Split discovery (below). | Yes |
 
 Phase 3 is the only irreversible step and can wait well after Phase 2 proves out.
+
+**Phase 1 leaves data in two places on purpose.** That duplication is the safety
+net, but until Phase 2 switches the reads, a write through the app updates
+`Event` and not the copy, so the opportunity rows go stale. Re-run the backfill
+with `--refresh` immediately before Phase 2 if time has passed —
+`scripts/backfill-event-opportunities.ts` overwrites from `Event` in that mode.
 
 The existing scores are **Irmak's** — computed against her FIRST_TIME rubric and
 her topics. They are attributed to her opportunity rows, not discarded.
