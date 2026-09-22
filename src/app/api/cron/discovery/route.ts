@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { runDiscovery, rotatingFocus } from "@/lib/discovery";
+import { scoreForAllSpeakers } from "@/lib/scoring";
 import { isAutoDiscoveryEnabled } from "@/lib/settings";
 
 export const maxDuration = 300;
@@ -19,6 +20,10 @@ export const dynamic = "force-dynamic";
  *   • Skips if auto-discovery is toggled off (AppSetting).
  *   • Skips if another run started in the last 10 minutes (no overlap / no spam).
  *   • Rotates the search focus each run so it keeps finding *new* events.
+ *
+ * Discovery only catalogues. Scoring runs straight after it, once per speaker,
+ * so what lands in an inbox overnight is already judged against that speaker's
+ * own brief — see docs/PER_SPEAKER_SPLIT.md.
  */
 async function handle(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -41,6 +46,13 @@ async function handle(request: NextRequest) {
 
   const focus = await rotatingFocus();
   const result = await runDiscovery({ focus });
+
+  /* Score whatever the catalogue now holds, including anything an earlier run
+     left unscored. Runs even when this pass found nothing new — a speaker who
+     just filled in their profile has a backlog of events nobody judged for
+     them yet. */
+  const scoring = await scoreForAllSpeakers();
+
   return NextResponse.json({
     ok: result.ok,
     focus,
@@ -48,6 +60,9 @@ async function handle(request: NextRequest) {
     found: result.found,
     total: result.total,
     error: result.error,
+    scored: scoring.scored,
+    speakers: scoring.speakers,
+    scoringErrors: scoring.errors.length ? scoring.errors : undefined,
   });
 }
 

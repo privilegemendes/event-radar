@@ -40,6 +40,7 @@ export default function InboxPage() {
   const [running,   setRunning]   = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+  const [scoring,   setScoring]   = useState(false);
   const [isAdmin,   setIsAdmin]   = useState(false);
   const [canReview, setCanReview] = useState(false);
   const [partnerRegionFilter, setPartnerRegionFilter] = useState("");
@@ -70,6 +71,28 @@ export default function InboxPage() {
       if (data.error) alert(`Discovery error: ${data.error}`);
     } finally {
       setRunning(false);
+    }
+  };
+
+  /* Score the shared catalogue against MY brief. Available to every signed-in
+     speaker, not just admins: discovery is shared and costs money, scoring is
+     personal and cheap, and a member who cannot run it never gets any scores. */
+  const runScoring = async () => {
+    setScoring(true);
+    setAnalyzeMsg(null);
+    try {
+      const res  = await fetch("/api/events/score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const data = (await res.json()) as { scored?: number; considered?: number; error?: string };
+      if (data.error) {
+        setAnalyzeMsg(`Error: ${data.error}`);
+      } else if (!data.considered) {
+        setAnalyzeMsg("Nothing new to score — every upcoming event already has your score.");
+      } else {
+        setAnalyzeMsg(`Scored ${data.scored ?? 0} event(s) for you`);
+        await loadData();
+      }
+    } finally {
+      setScoring(false);
     }
   };
 
@@ -119,12 +142,31 @@ export default function InboxPage() {
             Review auto-discovered events
           </p>
         </div>
-        {isAdmin && (
-          <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap">
+          {/* Score-for-me button — every speaker, not only admins */}
+          <button
+            onClick={runScoring}
+            disabled={scoring || running || analyzing}
+            className="flex items-center gap-2 px-3 py-2 border border-coder-green/30 text-coder-green/80 hover:text-coder-green hover:border-coder-green/60 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-all disabled:opacity-40"
+          >
+            {scoring ? (
+              <><span className="animate-spin w-3 h-3 border border-coder-green/30 border-t-coder-green rounded-full inline-block" />Scoring…</>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 1l1.6 3.2 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.5l.6-3.4L1 4.7l3.4-.5z"/>
+                </svg>
+                Score for me
+              </>
+            )}
+          </button>
+
+          {isAdmin && (
+            <>
             {/* Re-analyze button */}
             <button
               onClick={runAnalysis}
-              disabled={analyzing || running}
+              disabled={analyzing || running || scoring}
               className="flex items-center gap-2 px-3 py-2 border border-coder-cyan/30 text-coder-cyan/80 hover:text-coder-cyan hover:border-coder-cyan/60 font-mono text-[9px] uppercase tracking-[0.08em] rounded-lg transition-all disabled:opacity-40"
             >
               {analyzing ? (
@@ -142,7 +184,7 @@ export default function InboxPage() {
             {/* Run Discovery button */}
             <button
               onClick={runDiscovery}
-              disabled={running || analyzing}
+              disabled={running || analyzing || scoring}
               className="flex items-center gap-2 px-4 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors"
             >
               {running ? (
@@ -151,8 +193,9 @@ export default function InboxPage() {
                 <span className="font-mono text-[10px] uppercase tracking-[0.08em]">Run Discovery</span>
               )}
             </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Analyze result */}

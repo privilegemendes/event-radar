@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import { deriveGeo } from "@/lib/events";
-import { getApplicantProfile } from "@/lib/settings";
+import { profileFromRow } from "@/lib/profile-schema";
 import {
-  buildSpeakerProfile,
-  buildScoringRubric,
+  buildCatalogueScope,
+  mergeProfilesForCatalogue,
   buildExclusions,
   buildGeographyLine,
   buildSearchPlan,
@@ -12,6 +12,22 @@ import {
   parseList,
   isPrivateEvent,
 } from "@/lib/speaker-brief";
+
+/**
+ * Discovery: the shared catalogue pass.
+ *
+ * Phase 4 split this in two. Discovery used to find events AND score them, in
+ * one expensive web-search call, against whichever single speaker's brief it
+ * happened to run with — so every speaker was handed the same score, correct
+ * for at most one of them, and a second speaker meant a second web-search bill
+ * for events that are identical for everyone.
+ *
+ * Finding is shareable; judging is not. So this pass now reports only facts
+ * anyone would agree on — what the event is, when, where, who attends, what it
+ * costs, how to apply — and writes one unscored opportunity row per speaker.
+ * `scoreForSpeaker` in scoring.ts then judges those rows per speaker, with no
+ * web search at all, which is what makes a second speaker cheap.
+ */
 
 /* ── Robust JSON-array extractor ── */
 function extractJsonArray(text: string): unknown[] | null {
@@ -71,7 +87,6 @@ type DiscoveredEvent = {
   url?: string | null;
   cfpDeadline?: string | null;
   description?: string | null;
-  coderRelevant?: boolean;
   isPaid?: boolean | null;
   paidNote?: string | null;
   ticketCost?: string | null;
@@ -79,13 +94,7 @@ type DiscoveredEvent = {
   audienceSize?: number | null;
   otherSpeakers?: string | null;
   howToApply?: string | null;
-  acceptanceLikelihood?: string | null;
-  acceptanceRationale?: string | null;
   industry?: string | null;
-  relevancyScore?: number | null;
-  relevancyRationale?: string | null;
-  suggestedAction?: string | null;
-  category?: string | null;
   audienceSignals?: string[] | null;
   applyUrl?: string | null;
   attendUrl?: string | null;
@@ -104,7 +113,6 @@ const SCHEMA_BLOCK = `Return a STRICT JSON array — nothing else, no markdown f
   "url": "the official/main event home page URL (the page describing the event), or null",
   "cfpDeadline": "YYYY-MM-DD or null",
   "description": "1-2 sentences: what the event is",
-  "coderRelevant": true if the event is relevant to the speaker's employer's domain as described in the profile above (false when there is no employer angle),
   "isPaid": true/false/null,
   "paidNote": "e.g. '€500 honorarium', 'travel covered', or null",
   "ticketCost": "cost to ATTEND / ticket price if findable, e.g. 'Free', '~€1,995', 'From €99', or null",
@@ -112,18 +120,17 @@ const SCHEMA_BLOCK = `Return a STRICT JSON array — nothing else, no markdown f
   "audienceSize": integer or null,
   "otherSpeakers": "notable confirmed or past speakers, or null",
   "howToApply": "CFP form URL, email address, LinkedIn DM, or brief description",
-  "industry": "short vertical label per rubric above",
-  "relevancyScore": 0-100 integer per rubric above,
-  "relevancyRationale": "1-2 sentences explaining the score",
-  "suggestedAction": "ATTEND" | "APPLY_TO_SPEAK" | "BOTH",
-  "category": "ATTEND" | "PARTICIPATE" | "SPEAK",   // top-level track. SPEAK = a realistic personal speaking slot (suggestedAction APPLY_TO_SPEAK/BOTH). PARTICIPATE = attended in the employer role, or the employer would sponsor or exhibit, or the audience is that employer's customers and partners. Use PARTICIPATE only when the profile describes an employer angle. ATTEND = attended individually for personal learning or network, with no employer or speaking angle.
-  "audienceSignals": ["DEVELOPERS" | "ENGINEERS" | "CUSTOMERS" | "ENTREPRENEURS" | "SMBS" | "PROFESSIONALS" | "WOMEN_IN_TECH" | "PARTNERS"],   // who attends; include every tag that clearly applies. WOMEN_IN_TECH for Women-in-Tech/AI communities. CUSTOMERS/PARTNERS when the employer's prospective customers or channel partners gather there.
-  "acceptanceLikelihood": "HIGH" | "MEDIUM" | "LOW",
-  "acceptanceRationale": "one sentence on likelihood of getting accepted",
+  "industry": "short vertical label for the event's sector, e.g. 'fintech', 'healthtech', 'devtools', or null",
+  "audienceSignals": ["DEVELOPERS" | "ENGINEERS" | "CUSTOMERS" | "ENTREPRENEURS" | "SMBS" | "PROFESSIONALS" | "WOMEN_IN_TECH" | "PARTNERS"],   // who actually attends; include every tag that clearly applies. WOMEN_IN_TECH for Women-in-Tech/AI communities. This is an observation about the crowd, not a recommendation.
   "applyUrl": "the DIRECT URL to the speaker application / CFP submission (SPEAK) page — the page where you submit a talk. Only include if you saw this specific URL in search results; null otherwise",
   "attendUrl": "the DIRECT URL to the attendee registration / ticket / RSVP (ATTEND) page — where an attendee signs up or buys a ticket. Only include if you saw this specific URL in search results; null otherwise",
   "socialLinks": { "linkedin": "URL or null", "instagram": "URL or null", "twitter": "URL or null", "youtube": "URL or null", "facebook": "URL or null" } — only include platforms you verified exist; omit or null platforms not found
-}`;
+}
+
+Every field above is a FACT about the event, verifiable by anyone. Do not add a
+score, a rating, a ranking, a recommendation or a fit assessment — not as a
+field, not in the description, not in any prose. Leave a field null rather than
+guessing at it.`;
 
 export interface DiscoveryOptions {
   partnerId?: string;
@@ -165,30 +172,37 @@ export async function runDiscovery(opts: DiscoveryOptions = {}): Promise<Discove
   const todayStr = today.toISOString().slice(0, 10);
   const searchYear = today.getFullYear();
 
-  /* Every person-specific block in the prompts below is rendered from the
-     stored profile rather than hardcoded. A blank profile still yields a
-     coherent prompt — see buildSpeakerProfile's empty-profile test. */
-  const profile = await getApplicantProfile();
-  const speakerBlock   = buildSpeakerProfile(profile, "full");
-  const rubricBlock    = buildScoringRubric(profile);
-  const exclusionBlock = buildExclusions(profile);
-  const geographyLine  = buildGeographyLine(profile);
-  const searchPlan     = buildSearchPlan(profile, searchYear);
-  const privateKeywords = parseList(profile.privateKeywords);
+  /* The catalogue covers every speaker, so the prompt is built from the union
+     of their briefs rather than one person's. With no profiles at all this is
+     EMPTY_PROFILE, which the builders render as a coherent unfiltered prompt. */
+  const speakerRows = await db.speakerProfile.findMany();
+  const profiles = speakerRows.map((row) => profileFromRow(row as unknown as Record<string, unknown>));
+  const catalogue = mergeProfilesForCatalogue(profiles);
+
+  const scopeBlock     = buildCatalogueScope(catalogue);
+  const exclusionBlock = buildExclusions(catalogue);
+  const geographyLine  = buildGeographyLine(catalogue);
+  const searchPlan     = buildSearchPlan(catalogue, searchYear);
   const lastYear = searchYear + 2;
+
+  /* Privacy is per speaker: each speaker's own keywords decide what is hidden
+     in THEIR view. Kept out of the prompt entirely — it is a local rule, not
+     something the model should be told about or asked to apply. */
+  const speakers = speakerRows.map((row) => ({
+    userId: row.userId,
+    privateKeywords: parseList(row.privateKeywords),
+  }));
 
   let prompt: string;
 
   if (partner) {
     prompt = `Today is ${todayStr}.
 
-${speakerBlock}
-
-${rubricBlock}
+${scopeBlock}
 
 EXCLUSIONS for partner mode: skip pure legal/compliance/tax webinars and narrow non-tech trade shows with no networking value for a developer-tools partnership. INCLUDE the partner's own summits, customer events, user conferences, tech/AI events, webinars, roadshows, and conferences they sponsor or speak at — these are exactly what we want here.
 
-You are researching events linked to "${partner.name}" (headquartered in ${partner.country || "Europe"}) that this speaker could attend or speak at in their employer role.
+You are researching events linked to "${partner.name}" (headquartered in ${partner.country || "Europe"}) that the speakers in this catalogue could attend or speak at.
 
 Use MULTIPLE web searches (8-10) covering (today is ${today.toDateString()} — search the CURRENT and coming years, 2026, 2027 AND 2028, and only keep events dated from today onward through the end of 2028):
 1. ${partner.name} official website — events/newsroom/webinar pages: "${partner.name} events 2026 2027 2028", "${partner.name} summit 2026 2027 2028", "${partner.name} upcoming events"
@@ -203,8 +217,10 @@ Use MULTIPLE web searches (8-10) covering (today is ${today.toDateString()} — 
 10. Trade shows and expos where ${partner.name} exhibits: "${partner.name} exhibitor 2026 2027 2028", "${partner.name} booth"
 11. BrightTALK webinars & talks hosted or presented by ${partner.name}: "${partner.name} BrightTALK", "brighttalk.com ${partner.name}", "${partner.name} BrightTALK webinar 2026 2027 2028" — include on-demand and upcoming BrightTALK sessions the partner runs (type WEBINAR, usually isOnline true).
 
-Find events ${partner.name} HOSTS, SPONSORS, or SPEAKS AT. For each event, capture ALL THREE link types when findable: the official event page (url), the speaker/CFP application page (applyUrl), and the attendee registration/ticket page (attendUrl) — do NOT put a registration link in url; url is the main page only. Note: most partner events will be ATTEND (networking), but flag BOTH or APPLY_TO_SPEAK if there's genuinely an open speaker application track.
+Find events ${partner.name} HOSTS, SPONSORS, or SPEAKS AT. For each event, capture ALL THREE link types when findable: the official event page (url), the speaker/CFP application page (applyUrl), and the attendee registration/ticket page (attendUrl) — do NOT put a registration link in url; url is the main page only.
 ${geographyLine} Include the partner's flagship annual event wherever it is held.
+Note: most partner events are attended rather than spoken at, but still record an
+applyUrl whenever an open speaker track genuinely exists.
 
 Only include events AFTER ${todayStr}.
 
@@ -212,19 +228,17 @@ ${SCHEMA_BLOCK}`;
   } else if (broad) {
     prompt = `Today is ${todayStr}.
 
-${speakerBlock}
-
-${rubricBlock}
+${scopeBlock}
 ${focus ? `\nPRIORITY FOCUS FOR THIS RUN: ${focus}. Weight the majority of your searches toward this theme, but still cast the wide net described below.\n` : ""}
-WIDE-NET MODE: Scrape the web broadly for **ANY event and ANY podcast in or adjacent to this speaker's topics** — do NOT limit to the audiences the rubric scores highest. Include the full spectrum: conferences, summits, expos, world tours, meetups, hackathons, workshops, bootcamps, webinars, and podcasts (especially shows that accept or interview guests). Include large enterprise conferences AND small community meetups AND online webinars AND podcasts — anything genuinely on or near these topics.
+WIDE-NET MODE: Scrape the web broadly for **ANY event and ANY podcast in or adjacent to the topics in scope**. Include the full spectrum: conferences, summits, expos, world tours, meetups, hackathons, workshops, bootcamps, webinars, and podcasts (especially shows that accept or interview guests). Include large enterprise conferences AND small community meetups AND online webinars AND podcasts — anything genuinely on or near these topics.
 
-Do NOT apply narrow audience exclusions here. The ONLY things to skip are: (a) events with no real connection to the speaker's topics at all, and (b) anything you cannot verify is real via web search. Everything else is in-scope; just score it honestly with the rubric — events that score low and come back as ATTEND are still worth returning.
+Do NOT apply narrow audience exclusions here. The ONLY things to skip are: (a) events with no real connection to the topics in scope at all, and (b) anything you cannot verify is real via web search. Everything else belongs in the catalogue — a small, obscure or unpromising event is still a fact, and it is not your job to decide it is not worth returning.
 
 Use MANY web searches (8-10) casting a wide net. Work through these slices separately so results do not overlap:
 
 ${searchPlan}
 
-Also search for flagship and vendor events in these topics that fall outside the listed geographies — include them when they are genuinely flagship.
+Also search for flagship and vendor events in these topics that fall outside the listed places — include them when they are genuinely flagship.
 
 Capture ALL THREE link types when findable: the official event page (url), the speaker/CFP application page (applyUrl), and the attendee registration/ticket page (attendUrl). For podcasts, put the guest-application / contact URL in applyUrl or howToApply.
 
@@ -234,13 +248,11 @@ ${SCHEMA_BLOCK}`;
   } else {
     prompt = `Today is ${todayStr}.
 
-${speakerBlock}
-
-${rubricBlock}
-${focus ? `\nPRIORITY FOCUS FOR THIS RUN: ${focus}. Weight the majority of your searches toward this theme (events, meetups, podcasts, and webinars), while still applying the speaker profile, scoring rubric, and exclusions below.\n` : ""}
+${scopeBlock}
+${focus ? `\nPRIORITY FOCUS FOR THIS RUN: ${focus}. Weight the majority of your searches toward this theme (events, meetups, podcasts, and webinars), while still applying the scope and exclusions below.\n` : ""}
 ${exclusionBlock}
 
-Search the web for speaking opportunities for this speaker, prioritising events whose audience matches the rubric's highest-scoring bands.
+Search the web for events and speaking opportunities in the topics and places in scope.
 
 Use MULTIPLE web searches (8-10), working through these slices separately so results do not overlap and de-duplication does the rest:
 
@@ -310,16 +322,7 @@ ${SCHEMA_BLOCK}`;
     const todayMidnight = new Date(today);
     todayMidnight.setHours(0, 0, 0, 0);
 
-    /* Every speaker with a profile gets their own opportunity row for a newly
-       discovered event, so it appears in each of their inboxes. The scores
-       below are computed against the brief that ran THIS pass — see the note
-       at the insert. */
-    const speakers = await db.speakerProfile.findMany({ select: { userId: true } });
-
     const validTypes = ["CONFERENCE", "MEETUP", "EVENT", "PODCAST", "WEBINAR"];
-    const validLikelihoods = ["HIGH", "MEDIUM", "LOW"];
-    const validActions = ["ATTEND", "APPLY_TO_SPEAK", "BOTH"];
-    const validCategories = ["ATTEND", "PARTICIPATE", "SPEAK"];
     const validSignals = ["DEVELOPERS", "ENGINEERS", "CUSTOMERS", "ENTREPRENEURS", "SMBS", "PROFESSIONALS", "WOMEN_IN_TECH", "PARTNERS"];
     let inserted = 0;
 
@@ -329,11 +332,6 @@ ${SCHEMA_BLOCK}`;
       if (ev.url && existingUrls.has(ev.url.toLowerCase())) continue;
       if (ev.startDate && new Date(ev.startDate) < todayMidnight) continue;
 
-      const coderRelevant = partner ? true : (ev.coderRelevant ?? false);
-      const likelihood = ev.acceptanceLikelihood && validLikelihoods.includes(ev.acceptanceLikelihood) ? ev.acceptanceLikelihood : null;
-      const action = ev.suggestedAction && validActions.includes(ev.suggestedAction) ? ev.suggestedAction : null;
-      const score = ev.relevancyScore != null ? Math.min(100, Math.max(0, Number(ev.relevancyScore))) : null;
-      const category = ev.category && validCategories.includes(ev.category) ? ev.category : null;
       const signals = Array.isArray(ev.audienceSignals)
         ? ev.audienceSignals.map((s) => String(s).toUpperCase().replace(/[\s-]+/g, "_")).filter((s) => validSignals.includes(s))
         : [];
@@ -352,8 +350,6 @@ ${SCHEMA_BLOCK}`;
           url: ev.url ?? null,
           cfpDeadline: ev.cfpDeadline ? new Date(ev.cfpDeadline) : null,
           description: ev.description ?? null,
-          coderRelevant,
-          ownerOnly: isPrivateEvent({ title: ev.title, description: ev.description, industry: ev.industry, audienceDescription: ev.audienceDescription }, privateKeywords),
           status: "DISCOVERED",
           sourceNote,
           ...(partnerId ? { partner: { connect: { id: partnerId } } } : {}),
@@ -364,44 +360,30 @@ ${SCHEMA_BLOCK}`;
           audienceSize: ev.audienceSize != null ? Number(ev.audienceSize) : null,
           otherSpeakers: ev.otherSpeakers ?? null,
           howToApply: ev.howToApply ?? null,
-          acceptanceLikelihood: likelihood,
-          acceptanceRationale: ev.acceptanceRationale ?? null,
           applyUrl: ev.applyUrl ?? null,
           attendUrl: ev.attendUrl ?? null,
           socialLinks: ev.socialLinks ? JSON.stringify(ev.socialLinks) : null,
           industry: ev.industry ?? null,
-          relevancyScore: score,
-          relevancyRationale: ev.relevancyRationale ?? null,
-          suggestedAction: action,
-          category: category,
           audienceSignals: signals.length ? JSON.stringify([...new Set(signals)]) : null,
         },
       });
 
-      /* One opportunity per speaker profile.
+      /* One UNSCORED opportunity per speaker: the event lands in everyone's
+         inbox, and nobody is handed a judgement made for someone else. The
+         scoring pass fills these in per speaker.
 
-         NOTE: every speaker receives the SAME score, track and likelihood —
-         the ones this discovery pass computed, against whichever brief it ran
-         with. That is wrong for anyone else and is Phase 4's job to fix, by
-         splitting discovery into a shared catalogue pass and a cheap
-         per-speaker scoring pass. Until then the values are a starting point,
-         and each speaker can change their own without affecting anyone else. */
+         `private` is set here rather than there because it is deterministic —
+         each speaker's own keywords against the event's text, no model needed
+         and no reason to pay for one. */
       if (speakers.length) {
         await db.eventOpportunity.createMany({
           data: speakers.map((sp) => ({
             userId: sp.userId,
             eventId: created.id,
             status: "DISCOVERED" as const,
-            relevancyScore: score,
-            relevancyRationale: ev.relevancyRationale ?? null,
-            acceptanceLikelihood: likelihood,
-            acceptanceRationale: ev.acceptanceRationale ?? null,
-            suggestedAction: action,
-            category,
-            employerRelevant: coderRelevant,
             private: isPrivateEvent(
               { title: ev.title, description: ev.description, industry: ev.industry, audienceDescription: ev.audienceDescription },
-              privateKeywords,
+              sp.privateKeywords,
             ),
           })),
           skipDuplicates: true,
@@ -428,11 +410,15 @@ ${SCHEMA_BLOCK}`;
 /**
  * Focus theme for an automated run.
  *
- * Generated from the stored profile so each pass explores a different slice of
- * that speaker's own geographies and topics instead of a fixed list, and
- * rotates weekly. De-duplication at insert time handles any overlap.
+ * Generated from the merged catalogue brief — every speaker's geographies and
+ * topics — so the rotation eventually covers all of them rather than circling
+ * one person's list forever. Rotates weekly; de-duplication at insert time
+ * handles any overlap.
  */
 export async function rotatingFocus(seed = Date.now()): Promise<string> {
-  const profile = await getApplicantProfile();
-  return rotatingFocusFrom(buildFocusThemes(profile), seed);
+  const rows = await db.speakerProfile.findMany();
+  const catalogue = mergeProfilesForCatalogue(
+    rows.map((row) => profileFromRow(row as unknown as Record<string, unknown>)),
+  );
+  return rotatingFocusFrom(buildFocusThemes(catalogue), seed);
 }

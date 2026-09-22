@@ -51,7 +51,7 @@ Expand / migrate / contract. Each ships independently; nothing breaks between.
 | **1 — DONE (local)** | `EventOpportunity` added and backfilled. `Event` columns stay authoritative; nothing reads the new table yet. Two renames land here: `coderRelevant` → `employerRelevant` (it follows the speaker's own `employerAngle`) and `ownerOnly` → `private`. | Yes |
 | **2 — DONE** | Reads and writes scoped to the session user. Smaller than feared: the API keeps returning the **flat** shape `EventLike` already expects, so pages, components and ranking helpers were untouched — the change is six API routes plus discovery. | Yes (revert code) |
 | 3 | Drop the moved columns from `Event`. | **No** |
-| 4 | Split discovery (below). | Yes |
+| **4 — DONE** | Discovery split into a shared catalogue pass and a per-speaker scoring pass (below). | Yes (revert code) |
 
 Phase 3 is the only irreversible step and can wait well after Phase 2 proves out.
 
@@ -81,17 +81,46 @@ rows, per speaker. Instead:
 - **Background, soonest first**, so a useful ranked view appears within a minute
   or two rather than after one long blocking pass.
 
-## Discovery must split
+## Discovery split — DONE (Phase 4)
 
-Today one call finds *and* scores: 16k tokens with up to 10 web searches. N
-speakers would multiply that weekly.
+One call used to find *and* score: 16k tokens with up to 10 web searches, run
+against whichever single brief it happened to load. Two things were wrong with
+that. Every speaker was handed the same score, correct for at most one of them.
+And a second speaker meant a second web-search bill for events that are
+identical for everybody.
 
-| Pass | Cost | Who |
-|---|---|---|
-| Shared catalog discovery — web search | Expensive | **ADMIN** |
-| Per-speaker scoring — no web search, event facts + that brief | Cheap | **MEMBER**, for themselves |
+Finding is shareable. Judging is not. So:
 
-That boundary happens to match the role boundary exactly.
+| Pass | Cost | Who | Where |
+|---|---|---|---|
+| Catalogue — web search, facts only | Expensive, once for everyone | **ADMIN** | `src/lib/discovery.ts`, `POST /api/discovery` |
+| Scoring — no web search, event facts + that speaker's brief | Cheap, once per speaker | **MEMBER**, for themselves | `src/lib/scoring.ts`, `POST /api/events/score` |
+
+That boundary happens to match the role boundary exactly. Scoring is
+deliberately **not** admin-gated and takes no `userId`: it only ever writes the
+caller's own rows, and a member who cannot run it never gets any scores at all.
+
+What changed concretely:
+
+- Discovery's prompt carries no rubric and describes no person. Its schema
+  asks only for facts anyone would agree on, and says so explicitly — the
+  scoring fields are gone from both the schema and the parsed type.
+- Discovery's brief is now the **union of every speaker's** topics, places and
+  exclusions (`mergeProfilesForCatalogue`). Searching with one speaker's list
+  and calling the result shared was the other half of the same bug: a second
+  speaker would only ever see the first one's leftovers. The weekly focus
+  rotation covers the union too.
+- Discovery writes one **unscored** `EventOpportunity` per speaker. `private`
+  is still set there, per speaker from their own keywords — it is deterministic
+  and needs no model.
+- Scoring fills those in, upserting only where `relevancyScore` is null, so it
+  is safe to re-run and never overwrites a score a speaker has corrected.
+- The cron runs scoring straight after discovery, for every speaker, including
+  any backlog an earlier pass left unscored.
+
+Scoring stays cheap only as long as it has no `tools`. If it ever needs a fact
+the catalogue lacks, enrich the catalogue — once, for everyone — rather than
+giving this pass a web search.
 
 ## Deferred: the employer axis
 
@@ -122,6 +151,9 @@ Better Auth offering, provisioned and empty. It is **not** what this app uses.
 
 1. Pitch generation and outreach notes for MEMBERs — allowed, accepting
    per-member LLM spend, or admin-gated? Currently admin-gated.
-2. Phase 4 matters more now: discovery gives **every** speaker the same score,
-   computed against whichever brief that pass ran with. Wrong for everyone but
-   that speaker, and only the shared-find / per-speaker-score split fixes it.
+2. ~~Phase 4 matters more now: discovery gives **every** speaker the same
+   score.~~ Fixed — see the discovery split above.
+3. `POST /api/events/analyze` (the enrich pass: applyUrl, ticketCost, socials)
+   is still admin-gated and shared, which is right — those are catalogue facts.
+   It has not been re-examined since the split; it may now be doing work
+   discovery already does.
