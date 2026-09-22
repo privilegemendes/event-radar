@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import ProfileCalendarSettings from "@/components/ProfileCalendarSettings";
+import WorkspaceSettings from "@/components/WorkspaceSettings";
 
 interface User {
   id: string; email: string; name: string; role: "ADMIN" | "MEMBER";
@@ -68,8 +68,9 @@ export default function SettingsPage() {
         </a>
       </div>
 
-      {/* Applicant profile + work calendar (admin only) */}
-      {!loading && isAdmin && <ProfileCalendarSettings />}
+      {/* Shared workspace settings (admin only). The per-speaker profile and
+          brief moved to /profile, where every speaker can reach their own. */}
+      {!loading && isAdmin && <WorkspaceSettings />}
 
       {/* Users (admin only) */}
       {!loading && isAdmin && (
