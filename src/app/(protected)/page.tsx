@@ -134,7 +134,7 @@ export default function OverviewPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-    fetch("/api/users").then((r) => { if (r.ok) setIsAdmin(true); }).catch(() => {});
+    fetch("/api/auth/me").then((r) => r.json()).then((d: { role?: string }) => setIsAdmin(d?.role === "ADMIN")).catch(() => setIsAdmin(false));
   }, []);
 
   const handlePartnerMode = (val: string) => {

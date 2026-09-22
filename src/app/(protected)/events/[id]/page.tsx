@@ -172,14 +172,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const load = async () => {
       const [evRes, pRes, adminRes] = await Promise.all([
-        fetch(`/api/events/${id}`), fetch("/api/partners"), fetch("/api/users"),
+        fetch(`/api/events/${id}`), fetch("/api/partners"), fetch("/api/auth/me"),
       ]);
       if (!evRes.ok) { router.push("/"); return; }
       const ev = (await evRes.json()) as Event;
       const ps = (await pRes.json()) as Partner[];
       setEvent(ev); setForm(ev);
       setPartners(Array.isArray(ps) ? ps : []);
-      setIsAdmin(adminRes.ok);
+      setIsAdmin(((await adminRes.json()) as { role?: string })?.role === "ADMIN");
       setLoading(false);
     };
     load();

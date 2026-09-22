@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/session";
+import { getSession, requireAdmin, authErrorResponse, type Session } from "@/lib/session";
 import { getSetting, setSetting } from "@/lib/settings";
 import { deriveCategory } from "@/lib/events";
 import { costBucket } from "@/lib/constants";
@@ -69,8 +69,18 @@ export async function GET() {
 }
 
 export async function POST() {
-  const session = await getSession();
-  if (!session || session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  /* This route needs the session itself (for isOwner) and has no try/catch of
+     its own, so the guard is wrapped rather than the whole handler.
+     Behaviour note: an anonymous caller now gets 401 instead of the 403 this
+     route alone used to return — every other route already answered 401. */
+  let session: Session;
+  try {
+    session = await requireAdmin();
+  } catch (err) {
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
+    throw err;
+  }
 
   const stats = await computeStats(isOwner(session));
   const baseUrl = process.env.ANTHROPIC_BASE_URL, authToken = process.env.ANTHROPIC_AUTH_TOKEN;

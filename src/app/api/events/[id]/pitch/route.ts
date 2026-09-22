@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession } from "@/lib/session";
+import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { getApplicantProfile } from "@/lib/settings";
 import { speakerName, parseList, parsePronouns } from "@/lib/speaker-brief";
 
@@ -9,10 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireSession();
-    if (session.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requireAdmin();
 
     const { id } = await params;
     const event = await db.event.findUnique({
@@ -146,9 +143,8 @@ Write in the first person as ${name} (${pronouns.subject}/${pronouns.object}). R
 
     return NextResponse.json({ pitchDraft: updated.pitchDraft });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error("Pitch generation error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

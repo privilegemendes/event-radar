@@ -45,10 +45,10 @@ export default function PodiumsPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/events?view=podium").then((r) => r.json()),
-      fetch("/api/users").then((r) => r.ok ? r.json() : Promise.reject()).catch(() => null),
+      fetch("/api/auth/me").then((r) => r.json()).catch(() => null),
     ]).then(([evs, userOk]) => {
       setEvents(Array.isArray(evs) ? evs as PodiumEvent[] : []);
-      setIsAdmin(userOk !== null);
+      setIsAdmin((userOk as { role?: string } | null)?.role === "ADMIN");
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 

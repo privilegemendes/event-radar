@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession, getSession } from "@/lib/session";
+import { requireSession, requireAdmin, getSession, authErrorResponse } from "@/lib/session";
 import { serializeAudienceSignals } from "@/lib/events";
 import { isOwner } from "@/lib/owner";
 
@@ -20,9 +20,8 @@ export async function GET(
     if (event.ownerOnly && !isOwner(await getSession())) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(event);
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -86,9 +85,8 @@ export async function PUT(
 
     return NextResponse.json(event);
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -99,17 +97,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireSession();
-    if (session.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requireAdmin();
     const { id } = await params;
     await db.event.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    if (err instanceof Error && err.message === "Not authenticated") {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
