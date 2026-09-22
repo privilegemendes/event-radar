@@ -5,6 +5,7 @@ import { signIn } from "@/lib/auth-client";
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -125,6 +126,13 @@ export default function LoginPage() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-white/40">
+          No account yet?{" "}
+          <Link href="/signup" className="text-coder-purple hover:text-coder-purple-hover font-medium transition-colors">
+            Create one
+          </Link>
+        </p>
 
         <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-white/20">
           coder.com · EMEA Partner

@@ -5,4 +5,4 @@ import { createAuthClient } from "better-auth/react";
 /** Browser-side Better Auth client. Same-origin, so no baseURL is needed. */
 export const authClient = createAuthClient();
 
-export const { signIn, signOut, changePassword, useSession } = authClient;
+export const { signIn, signUp, signOut, changePassword, useSession } = authClient;
