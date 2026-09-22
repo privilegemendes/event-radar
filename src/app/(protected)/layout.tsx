@@ -1,23 +1,25 @@
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  // Viewing is open to anyone who can reach the app (gated by the Coder proxy).
-  // Editing requires an admin session; the UI hides write controls for guests/viewers.
+  /* Reads require a session. Middleware redirects on a missing cookie, but that
+     only checks the cookie exists — this is where an invalid or expired one is
+     actually caught, before anything renders. */
   const session = await getSession();
-  const role = session?.role ?? "MEMBER";
+  if (!session) redirect("/login");
+  const role = session.role;
 
   return (
     <div className="flex h-screen overflow-hidden bg-coder-bg">
       <Sidebar role={role} />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <TopBar
-          name={session?.name ?? "Guest"}
-          email={session?.email ?? "view-only"}
+          name={session.name}
+          email={session.email}
           role={role}
-          mustChangePassword={session?.mustChangePassword ?? false}
-          isGuest={!session}
+          mustChangePassword={session.mustChangePassword}
         />
         <main className="flex-1 overflow-auto p-5 md:p-7">{children}</main>
       </div>

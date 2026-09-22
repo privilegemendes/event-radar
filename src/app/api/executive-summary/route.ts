@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession, requireAdmin, authErrorResponse, type Session } from "@/lib/session";
+import { requireSession, getSession, requireAdmin, authErrorResponse, type Session } from "@/lib/session";
 import { getSetting, setSetting } from "@/lib/settings";
 import { deriveCategory } from "@/lib/events";
 import { costBucket } from "@/lib/constants";
@@ -62,7 +62,16 @@ async function computeStats(owner: boolean) {
 }
 
 export async function GET() {
-  const stats = await computeStats(isOwner(await getSession()));
+  let session: Session;
+  try {
+    session = await requireSession();
+  } catch (err) {
+    const authed = authErrorResponse(err);
+    if (authed) return authed;
+    throw err;
+  }
+
+  const stats = await computeStats(isOwner(session));
   const summary = await getSetting("exec_summary");
   const generatedAt = await getSetting("exec_summary_at");
   return NextResponse.json({ stats, summary, generatedAt });

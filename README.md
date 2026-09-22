@@ -16,7 +16,7 @@ Internal tool for **Irmak Eyiceoglu** (Coder EMEA Partner Manager) to discover, 
 - **Calendar view** — Monthly grid of all events
 - **Discovery inbox** — Review and approve/reject auto-discovered events
 - **Partner CRM** — EMEA partner ecosystem overview
-- **Open viewing, admin editing** — anyone who can reach the app can view (reads are public); edits, discovery, and AI actions require an **ADMIN** login
+- **Login required** — every page and every read requires a session. MEMBERs can browse and triage the discovery inbox; edits, discovery and AI actions require **ADMIN**
 
 ## Setup
 
@@ -162,14 +162,14 @@ Discovery also runs on a schedule so new events keep arriving without clicking a
 > Items 1 and 2 were open blockers and are now resolved; they are kept here as
 > standing constraints rather than to-dos.
 
-1. **Access protection — DONE.** Viewing in this app is intentionally open —
-   there is no login wall for reads (`GET`s are public; only writes require an
-   admin session), so a public Vercel URL would be readable by anyone with the
-   link. **Vercel Access Protection is now enabled** on the project
-   (`ssoProtection`, covering production URLs *and* all previews), which closes
-   this. Verified 2026-09-21 via the Vercel API. Do not disable it without
-   putting an equivalent gate in front — the app has no read-side login of its
-   own.
+1. **Access protection — DONE, and now belt-and-braces.** The app has its own
+   login wall: every page redirects to `/login` without a session, and every
+   `GET` answers 401. Vercel Access Protection (`ssoProtection`) is also enabled,
+   covering production URLs and all previews.
+
+   Either alone would do. Dropping Vercel's layer is now a safe option if you
+   want the app reachable by people who are not on the Vercel team — which was
+   the reason it was only visible to one person.
 2. **Database — DONE.** The Prisma datasource is already `postgresql`, backed by
    a hosted **Neon** instance, with `DATABASE_URL` (pooled) and
    `DATABASE_URL_UNPOOLED` (direct) set. Verified 2026-09-21 by connecting to it.

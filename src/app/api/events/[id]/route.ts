@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Public read: viewing is open.
+    await requireSession();
     const { id } = await params;
     const event = await db.event.findUnique({
       where: { id },

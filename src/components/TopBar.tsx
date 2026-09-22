@@ -9,10 +9,9 @@ interface TopBarProps {
   email: string;
   role: "ADMIN" | "MEMBER";
   mustChangePassword: boolean;
-  isGuest?: boolean;
 }
 
-export default function TopBar({ name, email, role, mustChangePassword, isGuest }: TopBarProps) {
+export default function TopBar({ name, email, role, mustChangePassword }: TopBarProps) {
   const router = useRouter();
 
   const logout = async () => {
@@ -54,21 +53,13 @@ export default function TopBar({ name, email, role, mustChangePassword, isGuest 
           >
             {role}
           </span>
+          {/* No guest branch: every page behind this layout requires a session. */}
           <button
             onClick={logout}
             className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/40 hover:text-white px-3 py-1.5 rounded border border-white/10 hover:border-white/20 transition-all"
-            style={{ display: isGuest ? "none" : undefined }}
           >
             Logout
           </button>
-          {isGuest && (
-            <a
-              href="/login"
-              className="font-mono text-[10px] uppercase tracking-[0.08em] text-coder-purple hover:text-coder-purple-hover px-3 py-1.5 rounded border border-coder-purple/30 hover:border-coder-purple/50 transition-all"
-            >
-              Log in to edit
-            </a>
-          )}
         </div>
       </header>
     </div>
