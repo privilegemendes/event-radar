@@ -4,7 +4,7 @@ export interface Session {
   userId: string;
   email: string;
   name: string;
-  role: "ADMIN" | "VIEWER";
+  role: "ADMIN" | "MEMBER";
   mustChangePassword: boolean;
 }
 

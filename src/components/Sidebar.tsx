@@ -93,7 +93,7 @@ const NAV_ITEMS = [
 ];
 
 interface SidebarProps {
-  role: "ADMIN" | "VIEWER";
+  role: "ADMIN" | "MEMBER";
 }
 
 export default function Sidebar({ role }: SidebarProps) {

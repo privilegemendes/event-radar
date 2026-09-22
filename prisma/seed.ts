@@ -24,7 +24,7 @@ async function main() {
   const users = [
     { email: "irmak@coder.com", name: "Irmak Eyiceoglu", role: "ADMIN" as const },
     { email: "assistant@example.com", name: "Assistant", role: "ADMIN" as const },
-    { email: "viewer@coder.com", name: "Viewer", role: "VIEWER" as const },
+    { email: "viewer@coder.com", name: "Viewer", role: "MEMBER" as const },
   ];
 
   for (const u of users) {

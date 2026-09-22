@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       name: user.name,
-      role: user.role as "ADMIN" | "VIEWER",
+      role: user.role as "ADMIN" | "MEMBER",
       mustChangePassword: false,
     });
 
