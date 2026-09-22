@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const { id } = await params;
     const event = await db.event.findUnique({
@@ -136,9 +136,13 @@ Write in the first person as ${name} (${pronouns.subject}/${pronouns.object}). R
       .map((b) => b.text ?? "")
       .join("\n");
 
-    const updated = await db.event.update({
-      where: { id },
-      data: { pitchDraft },
+    /* The draft is written in this speaker's voice, from their brief — it
+       belongs on their opportunity, not on the shared event where it would be
+       served to everyone. */
+    const updated = await db.eventOpportunity.upsert({
+      where: { userId_eventId: { userId: session.userId, eventId: id } },
+      create: { userId: session.userId, eventId: id, pitchDraft },
+      update: { pitchDraft },
     });
 
     return NextResponse.json({ pitchDraft: updated.pitchDraft });

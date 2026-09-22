@@ -310,6 +310,12 @@ ${SCHEMA_BLOCK}`;
     const todayMidnight = new Date(today);
     todayMidnight.setHours(0, 0, 0, 0);
 
+    /* Every speaker with a profile gets their own opportunity row for a newly
+       discovered event, so it appears in each of their inboxes. The scores
+       below are computed against the brief that ran THIS pass — see the note
+       at the insert. */
+    const speakers = await db.speakerProfile.findMany({ select: { userId: true } });
+
     const validTypes = ["CONFERENCE", "MEETUP", "EVENT", "PODCAST", "WEBINAR"];
     const validLikelihoods = ["HIGH", "MEDIUM", "LOW"];
     const validActions = ["ATTEND", "APPLY_TO_SPEAK", "BOTH"];
@@ -334,7 +340,7 @@ ${SCHEMA_BLOCK}`;
 
       const geo = deriveGeo({ location: ev.location, region: ev.region, title: ev.title, isOnline: ev.isOnline, type: ev.type });
 
-      await db.event.create({
+      const created = await db.event.create({
         data: {
           title: ev.title,
           type: ev.type as "CONFERENCE" | "MEETUP" | "EVENT" | "PODCAST" | "WEBINAR",
@@ -371,6 +377,36 @@ ${SCHEMA_BLOCK}`;
           audienceSignals: signals.length ? JSON.stringify([...new Set(signals)]) : null,
         },
       });
+
+      /* One opportunity per speaker profile.
+
+         NOTE: every speaker receives the SAME score, track and likelihood —
+         the ones this discovery pass computed, against whichever brief it ran
+         with. That is wrong for anyone else and is Phase 4's job to fix, by
+         splitting discovery into a shared catalogue pass and a cheap
+         per-speaker scoring pass. Until then the values are a starting point,
+         and each speaker can change their own without affecting anyone else. */
+      if (speakers.length) {
+        await db.eventOpportunity.createMany({
+          data: speakers.map((sp) => ({
+            userId: sp.userId,
+            eventId: created.id,
+            status: "DISCOVERED" as const,
+            relevancyScore: score,
+            relevancyRationale: ev.relevancyRationale ?? null,
+            acceptanceLikelihood: likelihood,
+            acceptanceRationale: ev.acceptanceRationale ?? null,
+            suggestedAction: action,
+            category,
+            employerRelevant: coderRelevant,
+            private: isPrivateEvent(
+              { title: ev.title, description: ev.description, industry: ev.industry, audienceDescription: ev.audienceDescription },
+              privateKeywords,
+            ),
+          })),
+          skipDuplicates: true,
+        });
+      }
 
       existingTitles.add(ev.title.toLowerCase());
       if (ev.url) existingUrls.add(ev.url.toLowerCase());

@@ -80,3 +80,101 @@ export function opportunityFromEvent<Status>(
     private: e.ownerOnly,
   };
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Phase 2: reading and writing one speaker's view.
+ *
+ * The API keeps returning a FLAT object — objective event fields and this
+ * speaker's fields merged together — because that is the shape every page,
+ * component and ranking helper already consumes (see EventLike in events.ts).
+ * Nesting the opportunity would be tidier on the wire and would touch twenty
+ * files; the separation is enforced by the schema either way.
+ *
+ * The wire also keeps the OLD names `coderRelevant` and `ownerOnly`, mapping to
+ * `employerRelevant` and `private` in storage. Renaming the wire is a separate,
+ * purely cosmetic change; doing it here would mean editing every consumer.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Fields a client may set on its own opportunity, in wire naming. */
+export const OPPORTUNITY_WIRE_FIELDS = [
+  "relevancyScore", "relevancyRationale", "acceptanceLikelihood", "acceptanceRationale",
+  "suggestedAction", "category", "status", "pitchDraft", "followUpAt",
+  "attending", "readiness", "prepStage", "customTasks",
+  "coderRelevant", "ownerOnly",
+] as const;
+
+const WIRE_TO_COLUMN: Record<string, string> = {
+  coderRelevant: "employerRelevant",
+  ownerOnly: "private",
+};
+
+/** What a speaker sees for an event they have no opportunity row for yet. */
+export function defaultOpportunity(): OpportunityFields {
+  return {
+    relevancyScore: null, relevancyRationale: null,
+    acceptanceLikelihood: null, acceptanceRationale: null,
+    suggestedAction: null, category: null,
+    employerRelevant: false,
+    status: "DISCOVERED",
+    pitchDraft: null, followUpAt: null,
+    attending: false, readiness: null, prepStage: null, customTasks: null,
+    private: false,
+  };
+}
+
+/**
+ * Merge an event row with this speaker's opportunity into the flat shape the
+ * app consumes. A missing opportunity yields defaults rather than undefined —
+ * an undefined score would render as "undefined" and an undefined status would
+ * break the pipeline filters.
+ */
+export function mergeEventWithOpportunity<E extends Record<string, unknown>>(
+  event: E,
+  opportunity: Partial<OpportunityFields> | null | undefined,
+): Record<string, unknown> {
+  const o = { ...defaultOpportunity(), ...(opportunity ?? {}) };
+  const { ...rest } = event;
+  delete (rest as Record<string, unknown>).opportunities;
+  return {
+    ...rest,
+    relevancyScore: o.relevancyScore,
+    relevancyRationale: o.relevancyRationale,
+    acceptanceLikelihood: o.acceptanceLikelihood,
+    acceptanceRationale: o.acceptanceRationale,
+    suggestedAction: o.suggestedAction,
+    category: o.category,
+    status: o.status,
+    pitchDraft: o.pitchDraft,
+    followUpAt: o.followUpAt,
+    attending: o.attending,
+    readiness: o.readiness,
+    prepStage: o.prepStage,
+    customTasks: o.customTasks,
+    // wire names, storage names behind them
+    coderRelevant: o.employerRelevant,
+    ownerOnly: o.private,
+  };
+}
+
+/**
+ * Split a PUT body into the columns that belong on the shared event and the
+ * ones that belong on this speaker's opportunity.
+ *
+ * Anything not recognised as a per-speaker field falls through to the event —
+ * so a new objective column keeps working without being listed here, while a
+ * new per-speaker column must be added deliberately.
+ */
+export function splitEventUpdate(body: Record<string, unknown>): {
+  eventData: Record<string, unknown>;
+  opportunityData: Record<string, unknown>;
+} {
+  const eventData: Record<string, unknown> = {};
+  const opportunityData: Record<string, unknown> = {};
+  const personal = new Set<string>(OPPORTUNITY_WIRE_FIELDS);
+
+  for (const [key, value] of Object.entries(body)) {
+    if (personal.has(key)) opportunityData[WIRE_TO_COLUMN[key] ?? key] = value;
+    else eventData[key] = value;
+  }
+  return { eventData, opportunityData };
+}
