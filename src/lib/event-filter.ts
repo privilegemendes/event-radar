@@ -55,10 +55,8 @@ export function notPrivateToOthers(userId: string): Condition {
  * What puts an event on this speaker's podium: a gig they accepted or have
  * already spoken at, or one they are attending.
  *
- * The per-speaker half only — the date half is `upcomingOrDateless()`. Shared
- * so the gigs badge and /podiums cannot disagree about what a gig is; the badge
- * counts opportunity rows, so it applies this match directly, while the list
- * wraps it in `mine()` to reach the row through the event.
+ * The per-speaker half only — the date half is `upcomingOrDateless()`. Both
+ * callers wrap it in `mine()`, so it says what a gig is without saying whose.
  *
  * SPOKEN belongs here with ACCEPTED: a talk you have given is still yours, and
  * dropping off the podium the moment it is marked spoken would lose it from the
@@ -66,6 +64,18 @@ export function notPrivateToOthers(userId: string): Condition {
  */
 export function podiumMatch(): Condition {
   return { OR: [{ status: { in: ["ACCEPTED", "SPOKEN"] } }, { attending: true }] };
+}
+
+/**
+ * The podium's other half: gigs that have not happened yet.
+ *
+ * A fact about the event rather than about anyone's opinion of it, so it is not
+ * part of `speakerConditions` — both the list route and `podiumCountWhere` AND
+ * it onto the Event where. A function rather than a constant because
+ * `new Date()` has to be evaluated per request, not once at module load.
+ */
+export function upcomingOrDateless(): Condition {
+  return { OR: [{ startDate: null }, { startDate: { gte: new Date() } }] };
 }
 
 export interface EventFilterParams {
@@ -119,9 +129,9 @@ export function speakerConditions(userId: string, params: EventFilterParams): Co
  * point. `speakerConditions` matches an event for the inbox either when this
  * speaker's opportunity is DISCOVERED *or* when they have no row at all (see
  * `NO_ROW_STATUS`); a count over `EventOpportunity` can only ever see the first
- * half of that. So a speaker who has never been scored — seven of the eight
- * accounts in the dev database — got a badge reading 0 above an inbox page
- * listing 1321 events.
+ * half of that. So a speaker who has never been scored — every account in the
+ * dev database bar one — got a badge reading 0 above an inbox page listing
+ * 1321 events.
  *
  * Built from `speakerConditions` with the same params `/inbox` sends
  * (`?status=DISCOVERED`) rather than a second hand-rolled predicate, so the
@@ -132,14 +142,19 @@ export function inboxCountWhere(userId: string): Condition {
 }
 
 /**
- * The podium's date bound: gigs that have not happened yet.
+ * The query behind the sidebar's gigs badge — the `/podiums` where clause.
  *
- * A fact about the event, not about anyone's opinion of it, so it is not part
- * of `speakerConditions` — the list route ANDs it onto the Event where, and the
- * counts route nests it under `event:` to reach it from an opportunity. It is a
- * function rather than a constant because `new Date()` has to be evaluated per
- * request, not once at module load.
+ * The badge restated that clause and got every part of it wrong in turn: it
+ * counted gigs that had already happened, missed ones marked SPOKEN, and
+ * filtered privacy on the speaker's own row (hiding a gig from the one person
+ * entitled to see it) instead of on other speakers'. Composed here from the
+ * same two helpers the list route composes, so there is nothing left to
+ * restate.
+ *
+ * Counting events rather than opportunity rows is what makes it the list's
+ * clause verbatim, and the two agree: `@@unique([userId, eventId])` means a
+ * qualifying event has exactly one qualifying row of this speaker's.
  */
-export function upcomingOrDateless(): Condition {
-  return { OR: [{ startDate: null }, { startDate: { gte: new Date() } }] };
+export function podiumCountWhere(userId: string): Condition {
+  return { AND: [...speakerConditions(userId, { view: "podium" }), upcomingOrDateless()] };
 }

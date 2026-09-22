@@ -1,17 +1,21 @@
 /**
- * The sidebar badge must agree with the page it links to.
+ * Each sidebar badge must agree with the page it links to.
  *
- * `speakerConditions` deliberately matches an inbox event either when this
- * speaker's opportunity is DISCOVERED *or* when they have no row at all, so
- * that an event nobody has judged still shows up. This route counted
- * `EventOpportunity` rows, which can only see the first half — so a speaker
- * with no rows yet read "0 to triage" above an inbox listing 1321 events. Five
- * of the six accounts in the dev database were in exactly that state.
+ * Both used to restate that page's where clause instead of composing it, and
+ * both drifted. The inbox badge counted `EventOpportunity` rows, so it could
+ * not see the events a speaker has no row for — every account in the dev
+ * database bar one read "0 to triage" above an inbox listing 1321. The gigs
+ * badge counted gigs that had already happened, missed ones marked SPOKEN, and
+ * filtered privacy on the speaker's own row.
  *
- * These tests assert the two queries are built from the same helper, which is
- * the only thing that stops them drifting again.
+ * These tests assert each badge is built from the same helpers its page is,
+ * which is the only thing that stops them drifting again.
  */
-import { speakerConditions, podiumMatch, NO_ROW_STATUS } from "@/lib/event-filter";
+import {
+  speakerConditions,
+  podiumCountWhere,
+  NO_ROW_STATUS,
+} from "@/lib/event-filter";
 
 jest.mock("@/lib/db", () => ({
   db: {
@@ -43,6 +47,10 @@ const SESSION = {
 /** What `/inbox` itself asks for: `?status=DISCOVERED&view=inbox`. */
 const INBOX_WHERE = { AND: speakerConditions(USER, { status: NO_ROW_STATUS }) };
 
+/** Which of the three Event counts a given `where` belongs to. */
+const isCoderEventsQuery = (w: unknown) => JSON.stringify(w).includes("isCoderEvent");
+const isPodiumQuery      = (w: unknown) => JSON.stringify(w).includes("SPOKEN");
+
 const eventCount = db.event.count as unknown as jest.Mock;
 const oppCount   = db.eventOpportunity.count as unknown as jest.Mock;
 
@@ -51,15 +59,27 @@ beforeEach(() => {
   (requireSession as jest.Mock).mockResolvedValue(SESSION);
 
   /* Stands in for the reproduction: 1321 events are visible to this speaker,
-     12 of them Coder events, and they own not one opportunity row. */
-  eventCount.mockImplementation(({ where }: { where: unknown }) =>
-    Promise.resolve(JSON.stringify(where).includes("opportunities") ? 1321 : 12),
-  );
-  oppCount.mockResolvedValue(0);
+     12 of them Coder events, 3 of them upcoming gigs. */
+  eventCount.mockImplementation(({ where }: { where: unknown }) => {
+    if (isCoderEventsQuery(where)) return Promise.resolve(12);
+    if (isPodiumQuery(where))      return Promise.resolve(3);
+    return Promise.resolve(1321);
+  });
+  oppCount.mockResolvedValue(999); // never read; a call would show up as 999
 });
 
 async function body() {
   return (await GET()).json();
+}
+
+/** The `where` the route actually handed to the gigs count. */
+async function podiumWhere(): Promise<{ AND: Record<string, unknown>[] }> {
+  await GET();
+  const found = eventCount.mock.calls
+    .map(([arg]: [{ where: unknown }]) => arg.where)
+    .find(isPodiumQuery);
+  expect(found).toBeDefined();
+  return found as { AND: Record<string, unknown>[] };
 }
 
 describe("GET /api/events/counts", () => {
@@ -86,40 +106,60 @@ describe("GET /api/events/counts", () => {
     expect(privacy).toEqual({ opportunities: { none: { private: true, NOT: { userId: USER } } } });
   });
 
-  it("leaves the gigs badge counting materialised rows", async () => {
-    // Confirmed, not assumed: ACCEPTED and attending are not what a missing row
-    // defaults to (DISCOVERED / false), so gigs has no no-row half to miss —
-    // which is why the podium filter passes matchesDefault=false for both.
+  it("counts the gigs badge with the /podiums where clause verbatim", async () => {
     await GET();
-    expect(oppCount).toHaveBeenCalledTimes(1);
-    expect(oppCount).toHaveBeenCalledWith({
-      where: expect.objectContaining({ userId: USER, OR: podiumMatch().OR }),
-    });
-    expect((await body()).gigs).toBe(0);
+    const podium = eventCount.mock.calls
+      .map(([arg]: [{ where: unknown }]) => arg.where)
+      .find(isPodiumQuery);
+    expect(podium).toBeDefined();
+
+    // Compared against a freshly composed clause by shape, because the date
+    // half mints its own `new Date()` — a literal toEqual would pass or fail on
+    // whether the clock ticked between the two calls.
+    const expected = podiumCountWhere(USER) as { AND: Record<string, unknown>[] };
+    const actual   = podium as { AND: Record<string, unknown>[] };
+    expect(actual.AND).toHaveLength(expected.AND.length);
+    expect(JSON.stringify(actual.AND.slice(0, -1))).toBe(JSON.stringify(expected.AND.slice(0, -1)));
+  });
+
+  it("reports the count of that query as the gigs badge", async () => {
+    expect((await body()).gigs).toBe(3);
   });
 
   it("counts a gig marked SPOKEN, as /podiums lists it", async () => {
     // The badge matched ACCEPTED alone, so a talk already given vanished from
     // it while the page went on showing it.
-    await GET();
-    const [{ where }] = oppCount.mock.calls[0] as [{ where: { OR: Record<string, unknown>[] } }];
-    expect(where.OR).toContainEqual({ status: { in: ["ACCEPTED", "SPOKEN"] } });
+    const [, gig] = (await podiumWhere()).AND;
+    const some = (gig.opportunities as { some: { OR: unknown[] } }).some;
+    expect(some.OR).toContainEqual({ status: { in: ["ACCEPTED", "SPOKEN"] } });
   });
 
   it("bounds the gigs badge at today, as /podiums does", async () => {
     // The badge read 1 above a page listing 0, because it counted a gig that
-    // had already happened. The bound reaches startDate through the relation.
-    await GET();
-    const [{ where }] = oppCount.mock.calls[0] as [{ where: { event?: { OR: Record<string, unknown>[] } } }];
-    expect(where.event).toBeDefined(); // the bound is reached through the relation
-
-    // Compared by shape and not against a second upcomingOrDateless() call:
-    // both mint their own `new Date()`, so a literal toEqual passes or fails on
-    // whether the clock ticked between them.
-    const [dateless, dated] = where.event!.OR;
+    // had already happened.
+    const { AND } = await podiumWhere();
+    const [dateless, dated] = AND[AND.length - 1].OR as Record<string, unknown>[];
     expect(dateless).toEqual({ startDate: null });
+
+    // By shape, not against a second upcomingOrDateless(): both mint their own
+    // `new Date()`, so a literal comparison turns on whether the clock ticked.
     const gte = (dated.startDate as { gte: Date }).gte;
     expect(Math.abs(gte.getTime() - Date.now())).toBeLessThan(1000);
+  });
+
+  it("hides only what ANOTHER speaker marked private, never my own gig", async () => {
+    // The badge used `private: false` on the speaker's own row, which hid a
+    // private gig from the one person entitled to see it — and, for the owner,
+    // dropped the privacy test altogether.
+    const [privacy] = (await podiumWhere()).AND;
+    expect(privacy).toEqual({ opportunities: { none: { private: true, NOT: { userId: USER } } } });
+  });
+
+  it("no longer counts opportunity rows for either badge", async () => {
+    // Both badges are Event counts now; an EventOpportunity count cannot carry
+    // an Event-level condition like the privacy rule without nesting it.
+    await GET();
+    expect(oppCount).not.toHaveBeenCalled();
   });
 
   it("leaves the Coder Events badge an event-level count", async () => {
