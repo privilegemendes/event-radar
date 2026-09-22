@@ -45,6 +45,13 @@ const IconPartners = () => (
     <path d="M15 13.5c0-2.21-1.343-4-3-4"/>
   </svg>
 );
+const IconProfile = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="8" cy="5.5" r="2.75"/>
+    <path d="M2.75 13.5a5.25 5.25 0 0 1 10.5 0"/>
+  </svg>
+);
+
 const IconSettings = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <circle cx="8" cy="8" r="2.5"/>
@@ -89,6 +96,7 @@ const NAV_ITEMS = [
   { href: "/partners",      label: "Partners",     Icon: IconPartners     },
   { href: "/coder-events",  label: "Coder Events",  Icon: IconCoderEvents  },
   { href: "/executive-summary", label: "Executive Summary", Icon: IconSummary },
+  { href: "/profile",       label: "Profile",       Icon: IconProfile      },
   { href: "/settings",      label: "Settings",      Icon: IconSettings     },
 ];
 
