@@ -1,28 +1,28 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession, authErrorResponse } from "@/lib/session";
-import { isOwner } from "@/lib/owner";
+import { badgeCountWhere } from "@/lib/event-filter";
 
 /**
  * Badge counts for the sidebar.
  *
  * The sidebar renders three integers on every page and re-reads them on every
- * navigation. It used to fetch the full event list three times and call .length,
- * which cost ~1.8 MB per page view; these are the same predicates as COUNTs.
+ * navigation. It used to fetch the full event list three times and call
+ * .length, which cost ~1.8 MB per page view; these are the same predicates as
+ * COUNTs.
+ *
+ * "The same predicates" is now literal. These were hand-written copies of the
+ * list endpoint's filters and had drifted from them in three ways at once —
+ * see badgeCountWhere. A badge whose number does not match the page behind it
+ * is worse than no badge, because it sends someone to an empty screen.
  */
 export async function GET() {
   try {
     const session = await requireSession();
 
-    /* Counted from this speaker's own opportunities, not from Event. The inbox
-       and podium badges are per person: what one speaker still has to triage
-       says nothing about what another has. */
-    const mine = { userId: session.userId };
-    const visible = isOwner(session) ? {} : { private: false };
-
     const [inbox, gigs] = await Promise.all([
-      db.eventOpportunity.count({ where: { ...mine, ...visible, status: "DISCOVERED" } }),
-      db.eventOpportunity.count({ where: { ...mine, ...visible, OR: [{ status: "ACCEPTED" }, { attending: true }] } }),
+      db.event.count({ where: badgeCountWhere(session.userId, "inbox") }),
+      db.event.count({ where: badgeCountWhere(session.userId, "podium") }),
     ]);
 
     /* Coder Events stays an Event-level count: it is a property of the event
