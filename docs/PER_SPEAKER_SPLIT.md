@@ -49,7 +49,7 @@ Expand / migrate / contract. Each ships independently; nothing breaks between.
 |---|---|---|
 | **0 — DONE** | `SpeakerProfile` table; brief moves out of `AppSetting` JSON. No `Event` changes; accessors still resolve the owner, so behaviour is unchanged. | Yes |
 | **1 — DONE (local)** | `EventOpportunity` added and backfilled. `Event` columns stay authoritative; nothing reads the new table yet. Two renames land here: `coderRelevant` → `employerRelevant` (it follows the speaker's own `employerAngle`) and `ownerOnly` → `private`. | Yes |
-| 2 | Switch reads/writes to `EventOpportunity`, scoped to the session user. **The big one** — 20 files, ~300 references. | Yes (revert code) |
+| **2 — DONE** | Reads and writes scoped to the session user. Smaller than feared: the API keeps returning the **flat** shape `EventLike` already expects, so pages, components and ranking helpers were untouched — the change is six API routes plus discovery. | Yes (revert code) |
 | 3 | Drop the moved columns from `Event`. | **No** |
 | 4 | Split discovery (below). | Yes |
 
@@ -107,9 +107,21 @@ Note the Neon database also carries an unused `neon_auth` schema which already
 contains `organization` / `member` / `invitation` tables. That is Neon's managed
 Better Auth offering, provisioned and empty. It is **not** what this app uses.
 
+## Settled along the way
+
+- **Reads require a login.** The public-read model was an artefact of the Coder
+  proxy and did not survive a public URL. Every page redirects and every `GET`
+  answers 401.
+- **Discovery creates an opportunity per speaker profile**, so a new event lands
+  in every speaker's inbox.
+- **The wire keeps the old names** `coderRelevant` and `ownerOnly`, mapping to
+  `employerRelevant` and `private` in storage. Renaming the wire is cosmetic and
+  would touch every consumer; the schema enforces the split regardless.
+
 ## Open decisions
 
 1. Pitch generation and outreach notes for MEMBERs — allowed, accepting
-   per-member LLM spend, or admin-gated?
-2. Does the "browse upcoming events logged out" work land inside this split (it
-   shares the same field boundary) or ship separately first?
+   per-member LLM spend, or admin-gated? Currently admin-gated.
+2. Phase 4 matters more now: discovery gives **every** speaker the same score,
+   computed against whichever brief that pass ran with. Wrong for everyone but
+   that speaker, and only the shared-find / per-speaker-score split fixes it.

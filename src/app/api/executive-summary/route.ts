@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession, getSession, requireAdmin, authErrorResponse, type Session } from "@/lib/session";
+import { requireSession, requireAdmin, authErrorResponse, type Session } from "@/lib/session";
 import { getSetting, setSetting } from "@/lib/settings";
 import { deriveCategory } from "@/lib/events";
 import { costBucket } from "@/lib/constants";
@@ -23,11 +23,31 @@ function countBy<T>(arr: T[], key: (t: T) => string | null | undefined) {
   return m;
 }
 
-async function computeStats(owner: boolean) {
-  const events = (await db.event.findMany({
-    where: owner ? {} : { ownerOnly: false },
-    select: { title: true, region: true, city: true, type: true, status: true, category: true, suggestedAction: true, coderRelevant: true, isCoderEvent: true, partnerId: true, relevancyScore: true, ticketCost: true, howToApply: true, description: true, startDate: true, url: true, audienceSignals: true, industry: true },
-  })) as Ev[];
+/* Stats are computed from ONE speaker's opportunities: the tracks, scores and
+   pipeline are their view of the catalogue, and summing them across speakers
+   would produce a number describing nobody. */
+async function computeStats(userId: string, owner: boolean) {
+  const rows = await db.eventOpportunity.findMany({
+    where: { userId, ...(owner ? {} : { private: false }) },
+    select: {
+      status: true, category: true, suggestedAction: true, relevancyScore: true,
+      employerRelevant: true,
+      event: {
+        select: {
+          title: true, region: true, city: true, type: true, isCoderEvent: true,
+          partnerId: true, ticketCost: true, howToApply: true, description: true,
+          startDate: true, url: true, audienceSignals: true, industry: true,
+        },
+      },
+    },
+  });
+
+  // Flatten to the shape the rest of this file already works with.
+  const events = rows.map((r) => ({
+    ...r.event,
+    status: r.status, category: r.category, suggestedAction: r.suggestedAction,
+    relevancyScore: r.relevancyScore, coderRelevant: r.employerRelevant,
+  })) as unknown as Ev[];
   const speakerCount = await db.speaker.count();
   const partnerCount = await db.partner.count();
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -71,7 +91,7 @@ export async function GET() {
     throw err;
   }
 
-  const stats = await computeStats(isOwner(session));
+  const stats = await computeStats(session.userId, isOwner(session));
   const summary = await getSetting("exec_summary");
   const generatedAt = await getSetting("exec_summary_at");
   return NextResponse.json({ stats, summary, generatedAt });
@@ -91,7 +111,7 @@ export async function POST() {
     throw err;
   }
 
-  const stats = await computeStats(isOwner(session));
+  const stats = await computeStats(session.userId, isOwner(session));
   const baseUrl = process.env.ANTHROPIC_BASE_URL, authToken = process.env.ANTHROPIC_AUTH_TOKEN;
   if (!baseUrl || !authToken) return NextResponse.json({ error: "LLM not configured" }, { status: 503 });
 

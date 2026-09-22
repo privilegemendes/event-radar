@@ -23,20 +23,25 @@ type AnalysisResult = {
 
 export async function POST() {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     // Find events needing enrichment (missing score, industry, or applyUrl)
+    /* Events this speaker has not scored yet. The gap is in THEIR opportunity,
+       not on the event: another speaker having scored it says nothing about
+       whether this one has. */
     const events = await db.event.findMany({
       where: {
         OR: [
-          { relevancyScore: null },
-          { industry: null },
+          { opportunities: { none: { userId: session.userId } } },
+          { opportunities: { some: { userId: session.userId, relevancyScore: null } } },
+          { opportunities: { some: { userId: session.userId, category: null } } },
           { applyUrl: null },
           { ticketCost: null },
-          { category: null },
-          { audienceSignals: null },
         ],
       },
-      include: { partner: { select: { name: true, category: true } } },
+      include: {
+        partner: { select: { name: true, category: true } },
+        opportunities: { where: { userId: session.userId }, take: 1 },
+      },
       take: 20, // keep batches smaller since we use web search
     });
 
@@ -167,6 +172,9 @@ CRITICAL: Only include URLs you actually found via web search. Return null for a
       const sl = res.socialLinks ?? null;
       const socialLinksStr = sl && Object.values(sl).some(Boolean) ? JSON.stringify(sl) : (ev.socialLinks ?? null);
 
+      const own = ev.opportunities?.[0];
+
+      // Objective enrichment stays on the shared catalogue.
       await db.event.update({
         where: { id: ev.id },
         data: {
@@ -174,16 +182,26 @@ CRITICAL: Only include URLs you actually found via web search. Return null for a
           description:         ev.description          ?? res.description ?? null,
           audienceDescription: ev.audienceDescription  ?? res.audienceDescription ?? null,
           audienceSize:        ev.audienceSize          ?? (res.audienceSize != null ? Number(res.audienceSize) : null),
-          relevancyScore:      score                   ?? ev.relevancyScore,
-          relevancyRationale:  res.relevancyRationale  ?? ev.relevancyRationale,
-          suggestedAction:     action                  ?? ev.suggestedAction,
           applyUrl:            res.applyUrl            ?? ev.applyUrl,
           ticketCost:          ev.ticketCost           ?? res.ticketCost ?? null,
-          category:            ev.category             ?? category,
           audienceSignals:     ev.audienceSignals      ?? (signals.length ? JSON.stringify(signals) : null),
           socialLinks:         socialLinksStr,
         },
       });
+
+      // The judgement is this speaker's.
+      const personal = {
+        relevancyScore:     score  ?? own?.relevancyScore     ?? null,
+        relevancyRationale: res.relevancyRationale ?? own?.relevancyRationale ?? null,
+        suggestedAction:    action ?? own?.suggestedAction    ?? null,
+        category:           own?.category ?? category ?? null,
+      };
+      await db.eventOpportunity.upsert({
+        where: { userId_eventId: { userId: session.userId, eventId: ev.id } },
+        create: { userId: session.userId, eventId: ev.id, ...personal },
+        update: personal,
+      });
+
       updated++;
     }
 

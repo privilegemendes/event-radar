@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession, getSession, authErrorResponse } from "@/lib/session";
+import { requireSession, authErrorResponse } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
 
 /**
@@ -12,21 +12,24 @@ import { isOwner } from "@/lib/owner";
  */
 export async function GET() {
   try {
-    await requireSession();
-    // are hidden from everyone except the owner.
-    const visible = isOwner(await getSession()) ? {} : { ownerOnly: false };
+    const session = await requireSession();
 
-    const [inbox, gigs, coderEvents] = await Promise.all([
-      // Inbox badge: events awaiting review.
-      db.event.count({ where: { ...visible, status: "DISCOVERED" } }),
-      // Podium badge: accepted speaking gigs plus anything marked as attending.
-      db.event.count({ where: { ...visible, OR: [{ status: "ACCEPTED" }, { attending: true }] } }),
-      // Coder Events badge: EMEA events from Coder's own schedule. Macro regions,
-      // matching EMEA_REGIONS on the Coder Events page and what deriveGeo() writes.
-      db.event.count({
-        where: { ...visible, isCoderEvent: true, region: { in: ["Europe", "UK"] } },
-      }),
+    /* Counted from this speaker's own opportunities, not from Event. The inbox
+       and podium badges are per person: what one speaker still has to triage
+       says nothing about what another has. */
+    const mine = { userId: session.userId };
+    const visible = isOwner(session) ? {} : { private: false };
+
+    const [inbox, gigs] = await Promise.all([
+      db.eventOpportunity.count({ where: { ...mine, ...visible, status: "DISCOVERED" } }),
+      db.eventOpportunity.count({ where: { ...mine, ...visible, OR: [{ status: "ACCEPTED" }, { attending: true }] } }),
     ]);
+
+    /* Coder Events stays an Event-level count: it is a property of the event
+       (on Coder's schedule, in EMEA), not of anyone's opinion of it. */
+    const coderEvents = await db.event.count({
+      where: { isCoderEvent: true, region: { in: ["Europe", "UK"] } },
+    });
 
     return NextResponse.json({ inbox, gigs, coderEvents });
   } catch (err) {

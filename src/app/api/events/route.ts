@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireSession, requireAdmin, getSession, authErrorResponse } from "@/lib/session";
+import { requireSession, requireAdmin, authErrorResponse } from "@/lib/session";
 import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { isOwner } from "@/lib/owner";
+import { mergeEventWithOpportunity, OPPORTUNITY_WIRE_FIELDS } from "@/lib/opportunity";
 
 /**
  * Named data contracts for the list endpoint. This route returns every matching
@@ -46,7 +47,7 @@ const VIEWS: Record<string, Prisma.EventSelect> = {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireSession();
+    const session = await requireSession();
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get("status") as EventStatus | null;
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {};
     // Owner-only (nomad) events are hidden from everyone except the owner.
-    if (!isOwner(await getSession())) where.ownerOnly = false;
+    if (!isOwner(session)) where.ownerOnly = false;
     if (status) where.status = status;
     if (type)   where.type   = type;
     if (coderRelevant === "true")  where.coderRelevant = true;
@@ -92,11 +93,23 @@ export async function GET(request: NextRequest) {
       { createdAt: "desc" },
     ];
 
+    /* Only THIS speaker's row is fetched. Another speaker's opinion never
+       reaches the query, so it cannot leak through the flattening below. */
+    const opportunities = { where: { userId: session.userId }, take: 1 } as const;
+
+    /* The projection views still name per-speaker columns, which now live on
+       the opportunity. Strip them from the event select and let the merge
+       supply them — otherwise a view would serve whatever stale value is still
+       sitting on the Event row until Phase 3 drops those columns. */
+    const personal = new Set<string>(OPPORTUNITY_WIRE_FIELDS);
+    const viewSelect = view && VIEWS[view]
+      ? Object.fromEntries(Object.entries(VIEWS[view]).filter(([k]) => !personal.has(k)))
+      : undefined;
+
     // Prisma rejects `select` and `omit` in the same query, so the two shapes are
     // separate calls. Both share `where` and `orderBy`.
-    const select = view ? VIEWS[view] : undefined;
-    const events = select
-      ? await db.event.findMany({ where, select, orderBy })
+    const rows = viewSelect
+      ? await db.event.findMany({ where, select: { ...viewSelect, id: true, opportunities }, orderBy })
       : await db.event.findMany({
           where,
           // Trim fields no list view renders — this endpoint returns every event, so
@@ -111,11 +124,16 @@ export async function GET(request: NextRequest) {
             createdAt:           true,
             updatedAt:           true,
           },
-          include: { partner: { select: { id: true, name: true, region: true, category: true } } },
+          include: { partner: { select: { id: true, name: true, region: true, category: true } }, opportunities },
           orderBy,
         });
 
-    return NextResponse.json(events);
+    return NextResponse.json(
+      rows.map((e) => mergeEventWithOpportunity(
+        e as Record<string, unknown>,
+        (e as { opportunities?: unknown[] }).opportunities?.[0] as never,
+      )),
+    );
   } catch (err) {
     const authed = authErrorResponse(err);
     if (authed) return authed;
