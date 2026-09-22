@@ -3,6 +3,7 @@ import {
   notPrivateToOthers,
   speakerConditions,
   inboxCountWhere,
+  podiumMatch,
   upcomingOrDateless,
   NO_ROW_STATUS,
 } from "./event-filter";
@@ -97,7 +98,7 @@ describe("speakerConditions", () => {
     const [, podium] = speakerConditions(ME, { view: "podium" });
     const some = (podium.opportunities as { some: Record<string, unknown> }).some;
     expect(some.userId).toBe(ME);
-    expect(some.OR).toEqual([{ status: { in: ["ACCEPTED", "SPOKEN"] } }, { attending: true }]);
+    expect(some.OR).toEqual(podiumMatch().OR);
   });
 
   it("does not let an unjudged event onto the podium", () => {
@@ -170,5 +171,31 @@ describe("upcomingOrDateless", () => {
     await new Promise((r) => setTimeout(r, 5));
     const second = (branches(upcomingOrDateless())[1].startDate as { gte: Date }).gte;
     expect(second.getTime()).toBeGreaterThan(first.getTime());
+  });
+});
+
+describe("podiumMatch", () => {
+  it("counts a gig already spoken at, not just an accepted one", () => {
+    // The gigs badge matched ACCEPTED alone, so a talk marked SPOKEN dropped
+    // out of the badge while /podiums went on listing it.
+    expect(podiumMatch().OR).toContainEqual({ status: { in: ["ACCEPTED", "SPOKEN"] } });
+  });
+
+  it("counts an event this speaker is attending", () => {
+    expect(podiumMatch().OR).toContainEqual({ attending: true });
+  });
+
+  it("is what /podiums filters on", () => {
+    const [, podium] = speakerConditions(ME, { view: "podium" });
+    const some = (podium.opportunities as { some: Record<string, unknown> }).some;
+    expect(some.OR).toEqual(podiumMatch().OR);
+  });
+
+  it("says nothing about dates or about whose row it is", () => {
+    // Both are the caller's to add — `mine` for the speaker, upcomingOrDateless
+    // for the date — so this stays usable against an opportunity row directly.
+    expect(Object.keys(podiumMatch())).toEqual(["OR"]);
+    expect(JSON.stringify(podiumMatch())).not.toContain("startDate");
+    expect(JSON.stringify(podiumMatch())).not.toContain("userId");
   });
 });

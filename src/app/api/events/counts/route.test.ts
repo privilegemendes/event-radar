@@ -11,7 +11,7 @@
  * These tests assert the two queries are built from the same helper, which is
  * the only thing that stops them drifting again.
  */
-import { speakerConditions, NO_ROW_STATUS } from "@/lib/event-filter";
+import { speakerConditions, podiumMatch, NO_ROW_STATUS } from "@/lib/event-filter";
 
 jest.mock("@/lib/db", () => ({
   db: {
@@ -93,12 +93,17 @@ describe("GET /api/events/counts", () => {
     await GET();
     expect(oppCount).toHaveBeenCalledTimes(1);
     expect(oppCount).toHaveBeenCalledWith({
-      where: expect.objectContaining({
-        userId: USER,
-        OR: [{ status: "ACCEPTED" }, { attending: true }],
-      }),
+      where: expect.objectContaining({ userId: USER, OR: podiumMatch().OR }),
     });
     expect((await body()).gigs).toBe(0);
+  });
+
+  it("counts a gig marked SPOKEN, as /podiums lists it", async () => {
+    // The badge matched ACCEPTED alone, so a talk already given vanished from
+    // it while the page went on showing it.
+    await GET();
+    const [{ where }] = oppCount.mock.calls[0] as [{ where: { OR: Record<string, unknown>[] } }];
+    expect(where.OR).toContainEqual({ status: { in: ["ACCEPTED", "SPOKEN"] } });
   });
 
   it("bounds the gigs badge at today, as /podiums does", async () => {

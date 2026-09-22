@@ -51,6 +51,23 @@ export function notPrivateToOthers(userId: string): Condition {
   return { opportunities: { none: { private: true, NOT: { userId } } } };
 }
 
+/**
+ * What puts an event on this speaker's podium: a gig they accepted or have
+ * already spoken at, or one they are attending.
+ *
+ * The per-speaker half only — the date half is `upcomingOrDateless()`. Shared
+ * so the gigs badge and /podiums cannot disagree about what a gig is; the badge
+ * counts opportunity rows, so it applies this match directly, while the list
+ * wraps it in `mine()` to reach the row through the event.
+ *
+ * SPOKEN belongs here with ACCEPTED: a talk you have given is still yours, and
+ * dropping off the podium the moment it is marked spoken would lose it from the
+ * page before the event date has even passed.
+ */
+export function podiumMatch(): Condition {
+  return { OR: [{ status: { in: ["ACCEPTED", "SPOKEN"] } }, { attending: true }] };
+}
+
 export interface EventFilterParams {
   status?: string | null;
   category?: string | null;
@@ -87,10 +104,9 @@ export function speakerConditions(userId: string, params: EventFilterParams): Co
   }
 
   if (params.view === "podium") {
-    // Accepted or attended gigs that have not happened yet. Both halves are
-    // this speaker's own — another speaker's acceptance must not pull an event
-    // onto my podium.
-    out.push(mine(userId, { OR: [{ status: { in: ["ACCEPTED", "SPOKEN"] } }, { attending: true }] }, false));
+    // Wrapped in `mine` so it is this speaker's own acceptance that counts —
+    // another speaker's must not pull an event onto my podium.
+    out.push(mine(userId, podiumMatch(), false));
   }
 
   return out;

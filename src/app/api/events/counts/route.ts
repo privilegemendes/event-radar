@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSession, authErrorResponse } from "@/lib/session";
 import { isOwner } from "@/lib/owner";
-import { inboxCountWhere, upcomingOrDateless } from "@/lib/event-filter";
+import { inboxCountWhere, podiumMatch, upcomingOrDateless } from "@/lib/event-filter";
 
 /**
  * Badge counts for the sidebar.
@@ -23,12 +23,15 @@ export async function GET() {
        has no opportunity row for at all — an EventOpportunity count cannot
        express that half. See src/lib/event-filter.ts.
 
-       The gigs badge stays an EventOpportunity count: ACCEPTED and attending
-       are not what a missing row defaults to, so there is no no-row half to
-       miss, and the podium's own filter agrees by passing matchesDefault=false.
-       It does take /podiums' date bound, reached through the relation because
-       startDate is a fact about the event — without it the badge counted gigs
-       that have already happened and stood above a page that lists none. */
+       The gigs badge stays an EventOpportunity count: ACCEPTED, SPOKEN and
+       attending are not what a missing row defaults to, so there is no no-row
+       half to miss, and the podium's own filter agrees by passing
+       matchesDefault=false. Both halves of what /podiums lists are now shared
+       with it rather than restated — what counts as a gig, and the date bound,
+       which is reached through the relation because startDate is a fact about
+       the event. Restating them is how the badge came to count gigs that had
+       already happened, and to miss ones marked SPOKEN, above a page showing
+       neither. */
     const mine = { userId: session.userId };
     const visible = isOwner(session) ? {} : { private: false };
 
@@ -38,7 +41,7 @@ export async function GET() {
         where: {
           ...mine,
           ...visible,
-          OR: [{ status: "ACCEPTED" }, { attending: true }],
+          ...podiumMatch(),
           event: upcomingOrDateless(),
         },
       }),
