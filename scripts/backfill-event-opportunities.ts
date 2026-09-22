@@ -7,9 +7,10 @@
  * belong to a person, so a second speaker can hold their own without
  * overwriting the first.
  *
- * Nothing reads EventOpportunity yet; the Event columns stay authoritative
- * until Phase 2. Until then a write through the app updates Event and not the
- * copy, so re-run this immediately before Phase 2 if time has passed.
+ * DO NOT run this when Phase 1 deploys. Nothing reads EventOpportunity until
+ * Phase 2 switches the reads, and a copy goes stale as soon as anyone uses the
+ * app — a write updates Event and not the copy. Run it as the first step of the
+ * Phase 2 deploy, with --refresh, against current data.
  *
  *   npx tsx --env-file=.env.local scripts/backfill-event-opportunities.ts          # dry run
  *   npx tsx --env-file=.env.local scripts/backfill-event-opportunities.ts --write  # apply

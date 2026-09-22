@@ -55,11 +55,14 @@ Expand / migrate / contract. Each ships independently; nothing breaks between.
 
 Phase 3 is the only irreversible step and can wait well after Phase 2 proves out.
 
-**Phase 1 leaves data in two places on purpose.** That duplication is the safety
-net, but until Phase 2 switches the reads, a write through the app updates
-`Event` and not the copy, so the opportunity rows go stale. Re-run the backfill
-with `--refresh` immediately before Phase 2 if time has passed —
-`scripts/backfill-event-opportunities.ts` overwrites from `Event` in that mode.
+**Do not run the backfill when Phase 1 deploys.** It has no consumer until
+Phase 2 switches the reads, and it goes stale the moment anyone uses the app —
+observed in practice: 298 events were re-triaged in production within an hour of
+a snapshot, and a copy taken beforehand would have silently missed all of them.
+
+Run `scripts/backfill-event-opportunities.ts --write --refresh` as the **first
+step of the Phase 2 deploy**, against current data, immediately before the reads
+flip. One run, no window for drift.
 
 The existing scores are **Irmak's** — computed against her FIRST_TIME rubric and
 her topics. They are attributed to her opportunity rows, not discarded.
