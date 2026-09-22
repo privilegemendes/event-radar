@@ -33,6 +33,42 @@ function resolveBaseURL(): string | undefined {
   return undefined;
 }
 
+/**
+ * Origins Better Auth will accept a request from.
+ *
+ * Better Auth rejects any request whose Origin header does not match the
+ * baseURL, with "Invalid origin". This project answers on several hostnames —
+ * two named production domains plus Vercel's per-deployment and per-branch
+ * aliases — so matching only the baseURL locks sign-in out of all but one.
+ *
+ * Deliberately NOT a "*.vercel.app" wildcard: that would trust every app on
+ * Vercel, which is the whole point of the check. Each host is named, and extra
+ * ones can be added through BETTER_AUTH_TRUSTED_ORIGINS without a deploy.
+ */
+function resolveTrustedOrigins(): string[] {
+  const origins = new Set<string>();
+
+  const base = resolveBaseURL();
+  if (base) origins.add(base);
+
+  // This deployment's own URL, and the branch alias — covers previews.
+  if (process.env.VERCEL_URL) origins.add(`https://${process.env.VERCEL_URL}`);
+  if (process.env.VERCEL_BRANCH_URL) origins.add(`https://${process.env.VERCEL_BRANCH_URL}`);
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    origins.add(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+  }
+
+  // Named production domains, comma-separated, bare host or full origin.
+  for (const raw of (process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "").split(",")) {
+    const v = raw.trim();
+    if (v) origins.add(v.startsWith("http") ? v : `https://${v}`);
+  }
+
+  if (process.env.NODE_ENV !== "production") origins.add("http://localhost:3000");
+
+  return [...origins];
+}
+
 export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
 
@@ -42,6 +78,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET || process.env.SESSION_SECRET,
 
   baseURL: resolveBaseURL(),
+  trustedOrigins: resolveTrustedOrigins(),
 
   emailAndPassword: {
     enabled: true,

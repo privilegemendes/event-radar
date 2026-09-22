@@ -64,6 +64,7 @@ The app will display a banner until the default password is changed.
 | `DATABASE_URL` | PostgreSQL connection string |
 | `BETTER_AUTH_SECRET` | Strong random secret (≥ 32 chars) |
 | `BETTER_AUTH_URL` | The app's public URL. **Set this explicitly in production** — it is only inferred from Vercel's env vars otherwise, and `VERCEL_URL` is per-deployment, not the stable domain. |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | Comma-separated hostnames Better Auth accepts sign-in requests from. **Required when the project answers on more than one domain** — otherwise every host except the `baseURL` gets `Invalid origin` at sign-in. Vercel's per-deployment and branch URLs are added automatically in code. |
 | `ANTHROPIC_BASE_URL` | Anthropic API gateway base URL |
 | `ANTHROPIC_AUTH_TOKEN` | Anthropic API authentication token |
 
