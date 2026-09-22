@@ -1,28 +1,28 @@
 /* ── Event type badge styles — Coder brand palette ── */
 export const EVENT_TYPE_STYLES: Record<string, string> = {
-  CONFERENCE: "bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30",
-  MEETUP:     "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30",
-  EVENT:      "bg-[#FF8067]/15 text-[#FF8067] border border-[#FF8067]/30",
-  PODCAST:    "bg-[#F08DFF]/15 text-[#F08DFF] border border-[#F08DFF]/30",
-  WEBINAR:    "bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30",
+  CONFERENCE: "bg-coder-purple/15 text-coder-purple border border-coder-purple/30",
+  MEETUP:     "bg-coder-green/15 text-coder-green border border-coder-green/30",
+  EVENT:      "bg-coder-coral/15 text-coder-coral border border-coder-coral/30",
+  PODCAST:    "bg-coder-pink/15 text-coder-pink border border-coder-pink/30",
+  WEBINAR:    "bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30",
 };
 
 export const EVENT_TYPE_DOT: Record<string, string> = {
-  CONFERENCE: "bg-[#BC7CFF]",
-  MEETUP:     "bg-[#66FFAB]",
-  EVENT:      "bg-[#FF8067]",
-  PODCAST:    "bg-[#F08DFF]",
-  WEBINAR:    "bg-[#01F2FF]",
+  CONFERENCE: "bg-coder-purple",
+  MEETUP:     "bg-coder-green",
+  EVENT:      "bg-coder-coral",
+  PODCAST:    "bg-coder-pink",
+  WEBINAR:    "bg-coder-cyan",
 };
 
 /* ── Status badge styles ── */
 export const STATUS_STYLES: Record<string, string> = {
   DISCOVERED: "bg-white/5 text-white/50 border border-white/10",
-  APPROVED:   "bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30",
-  PITCHED:    "bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30",
-  ACCEPTED:   "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30",
-  SPOKEN:     "bg-[#66FFAB]/10 text-[#66FFAB]/70 border border-[#66FFAB]/20",
-  REJECTED:   "bg-[#FF8067]/15 text-[#FF8067] border border-[#FF8067]/30",
+  APPROVED:   "bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30",
+  PITCHED:    "bg-coder-purple/15 text-coder-purple border border-coder-purple/30",
+  ACCEPTED:   "bg-coder-green/15 text-coder-green border border-coder-green/30",
+  SPOKEN:     "bg-coder-green/10 text-coder-green/70 border border-coder-green/20",
+  REJECTED:   "bg-coder-coral/15 text-coder-coral border border-coder-coral/30",
 };
 
 export const STATUS_ORDER = [
@@ -35,22 +35,22 @@ export const STATUS_ORDER = [
 ];
 
 export const LIKELIHOOD_STYLES: Record<string, string> = {
-  HIGH:   "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30",
-  MEDIUM: "bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30",
-  LOW:    "bg-[#FF8067]/15 text-[#FF8067] border border-[#FF8067]/30",
+  HIGH:   "bg-coder-green/15 text-coder-green border border-coder-green/30",
+  MEDIUM: "bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30",
+  LOW:    "bg-coder-coral/15 text-coder-coral border border-coder-coral/30",
 };
 
 export const ACTION_STYLES: Record<string, string> = {
-  APPLY_TO_SPEAK: "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30",
-  BOTH:           "bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30",
+  APPLY_TO_SPEAK: "bg-coder-green/15 text-coder-green border border-coder-green/30",
+  BOTH:           "bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30",
   ATTEND:         "bg-white/5 text-white/40 border border-white/10",
 };
 
 export function scoreColor(n: number | null): string {
   if (n == null) return "bg-white/5 text-white/30 border border-white/10";
-  if (n >= 70)  return "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30";
-  if (n >= 40)  return "bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30";
-  return               "bg-[#FF8067]/15 text-[#FF8067] border border-[#FF8067]/30";
+  if (n >= 70)  return "bg-coder-green/15 text-coder-green border border-coder-green/30";
+  if (n >= 40)  return "bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30";
+  return               "bg-coder-coral/15 text-coder-coral border border-coder-coral/30";
 }
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -98,10 +98,10 @@ export const REGION_LABELS: Record<string, string> = {
 };
 
 export const REGION_STYLES: Record<string, string> = {
-  NAMER: "bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30",
-  EMEA:  "bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30",
-  LATAM: "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30",
-  APAC:  "bg-[#FFC46B]/15 text-[#FFC46B] border border-[#FFC46B]/30",
+  NAMER: "bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30",
+  EMEA:  "bg-coder-purple/15 text-coder-purple border border-coder-purple/30",
+  LATAM: "bg-coder-green/15 text-coder-green border border-coder-green/30",
+  APAC:  "bg-coder-amber/15 text-coder-amber border border-coder-amber/30",
 };
 
 /* ── Top-level tracks ── */
@@ -129,9 +129,9 @@ export const CATEGORY_RANK_HINTS: Record<string, string> = {
 };
 
 export const CATEGORY_STYLES: Record<string, string> = {
-  ATTEND:      "bg-[#01F2FF]/15 text-[#01F2FF] border border-[#01F2FF]/30",
-  PARTICIPATE: "bg-[#BC7CFF]/15 text-[#BC7CFF] border border-[#BC7CFF]/30",
-  SPEAK:       "bg-[#66FFAB]/15 text-[#66FFAB] border border-[#66FFAB]/30",
+  ATTEND:      "bg-coder-cyan/15 text-coder-cyan border border-coder-cyan/30",
+  PARTICIPATE: "bg-coder-purple/15 text-coder-purple border border-coder-purple/30",
+  SPEAK:       "bg-coder-green/15 text-coder-green border border-coder-green/30",
 };
 
 export const CATEGORY_ACCENT: Record<string, string> = {
@@ -159,14 +159,14 @@ export const AUDIENCE_LABELS: Record<string, string> = {
 };
 
 export const AUDIENCE_STYLES: Record<string, string> = {
-  DEVELOPERS:    "bg-[#01F2FF]/10 text-[#01F2FF]/80 border border-[#01F2FF]/25",
-  ENGINEERS:     "bg-[#01F2FF]/10 text-[#01F2FF]/80 border border-[#01F2FF]/25",
-  CUSTOMERS:     "bg-[#66FFAB]/10 text-[#66FFAB]/80 border border-[#66FFAB]/25",
-  ENTREPRENEURS: "bg-[#FF8067]/10 text-[#FF8067]/80 border border-[#FF8067]/25",
-  SMBS:          "bg-[#FFC46B]/10 text-[#FFC46B]/90 border border-[#FFC46B]/25",
+  DEVELOPERS:    "bg-coder-cyan/10 text-coder-cyan/80 border border-coder-cyan/25",
+  ENGINEERS:     "bg-coder-cyan/10 text-coder-cyan/80 border border-coder-cyan/25",
+  CUSTOMERS:     "bg-coder-green/10 text-coder-green/80 border border-coder-green/25",
+  ENTREPRENEURS: "bg-coder-coral/10 text-coder-coral/80 border border-coder-coral/25",
+  SMBS:          "bg-coder-amber/10 text-coder-amber/90 border border-coder-amber/25",
   PROFESSIONALS: "bg-white/5 text-white/50 border border-white/15",
-  WOMEN_IN_TECH: "bg-[#F08DFF]/15 text-[#F08DFF] border border-[#F08DFF]/30",
-  PARTNERS:      "bg-[#BC7CFF]/10 text-[#BC7CFF]/80 border border-[#BC7CFF]/25",
+  WOMEN_IN_TECH: "bg-coder-pink/15 text-coder-pink border border-coder-pink/30",
+  PARTNERS:      "bg-coder-purple/10 text-coder-purple/80 border border-coder-purple/25",
 };
 
 /* ── Readiness checklists ── */
