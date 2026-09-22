@@ -12,7 +12,7 @@ export const maxDuration = 120;
    body.tone (optional): "warm" | "witty" | "thoughtful" — varies the style. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id } = await params;
     const body = await request.json().catch(() => ({})) as { tone?: string };
     const tone = ["warm", "witty", "thoughtful"].includes(body.tone ?? "") ? body.tone! : "warm";
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ? "Make it thoughtful and sincere."
       : "Make it warm and genuine.";
 
-    const profile = await getApplicantProfile();
+    const profile = await getApplicantProfile(session.userId);
     const speakerBlock = buildSpeakerProfile(profile, "compact");
     const name = speakerName(profile);
 

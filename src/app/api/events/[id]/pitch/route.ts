@@ -34,7 +34,8 @@ export async function POST(
       intelLines.push(`- How to apply: ${event.howToApply}`);
     const intelBlock = intelLines.length > 0 ? "\n" + intelLines.join("\n") : "";
 
-    const profile = await getApplicantProfile();
+    // The pitch goes out in this speaker's name, with their credentials.
+    const profile = await getApplicantProfile(session.userId);
     const name = speakerName(profile);
     const employerAngle = (profile.employerAngle ?? "").trim();
     const credentials = parseList(profile.credentials);
