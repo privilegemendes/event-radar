@@ -5,6 +5,8 @@ import { mergeEventWithOpportunity } from "@/lib/opportunity";
 import { getApplicantProfile } from "@/lib/settings";
 import { scoreForSpeaker, selectUnscoredEvents, buildScoringBrief, applyScores, type ScoreSubmission } from "@/lib/scoring";
 import { renderEventFacts, LIKELIHOODS, ACTIONS, CATEGORIES } from "@/lib/scoring-parse";
+import { buildPitchPrompt, savePitchDraft } from "@/lib/pitch";
+import { buildSummaryBrief, saveSummary } from "@/lib/executive-summary";
 import { MAX_LIMIT } from "@/lib/pagination";
 
 /**
@@ -361,6 +363,84 @@ export function registerEventRadarTools(server: Registrable, userId: string) {
           outcome.rejected ? `${outcome.rejected} had no matching event and were rejected.` : null,
         ].filter(Boolean).join(" ") || undefined,
       });
+    },
+  );
+
+  server.registerTool(
+    "get_pitch_prompt",
+    {
+      title: "Get the prompt for drafting an application",
+      description:
+        "Fetch the application prompt for one event, rendered from YOUR profile, credentials and " +
+        "the event's own intel — so you can write the draft here on your own model rather than " +
+        "spending the server's. Write it from `prompt`, then send it to save_pitch_draft.",
+      inputSchema: { id: z.string().describe("Event id from search_events") },
+    },
+    async (a: Record<string, never>) => {
+      const { id } = a as unknown as { id: string };
+      const built = await buildPitchPrompt(userId, id);
+      if (!built) return json({ error: `No event with id ${id}` });
+      return json({
+        eventId: built.event.id,
+        title: built.event.title,
+        prompt: built.prompt,
+        next: "Write the application from `prompt`, then call save_pitch_draft with it.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "save_pitch_draft",
+    {
+      title: "Save a drafted application",
+      description:
+        "Store an application you drafted on YOUR row for this event. Nobody else sees it. " +
+        "This REPLACES any existing draft — redrafting is the normal way to use it.",
+      inputSchema: {
+        id: z.string().describe("Event id"),
+        pitchDraft: z.string().min(1).describe("The application text, subject line included"),
+      },
+    },
+    async (a: Record<string, never>) => {
+      const { id, pitchDraft } = a as unknown as { id: string; pitchDraft: string };
+      const saved = await savePitchDraft(userId, id, pitchDraft);
+      return json({ eventId: id, saved: true, length: saved?.length ?? 0 });
+    },
+  );
+
+  server.registerTool(
+    "get_summary_brief",
+    {
+      title: "Get the brief for an executive summary",
+      description:
+        "Fetch YOUR pipeline aggregates and the advisory brief built from them, so you can write " +
+        "the executive summary here on your own model. Write it in GitHub-flavoured Markdown from " +
+        "`brief`, then send it to save_summary. The stats cover only your own opportunities.",
+      inputSchema: {},
+    },
+    async () => {
+      const { brief, stats } = await buildSummaryBrief(userId, false);
+      return json({
+        brief,
+        stats,
+        next: "Write the summary from `brief`, then call save_summary with the Markdown.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "save_summary",
+    {
+      title: "Save an executive summary",
+      description:
+        "Store a summary you wrote, under YOUR key. Replaces any previous one — a summary is a " +
+        "snapshot of the data as it stands, not a record to keep.",
+      inputSchema: { summary: z.string().min(1).describe("GitHub-flavoured Markdown") },
+    },
+    async (a: Record<string, never>) => {
+      const { summary } = a as unknown as { summary: string };
+      const generatedAt = await saveSummary(userId, summary);
+      return json({ saved: true, generatedAt, length: summary.length });
     },
   );
 
