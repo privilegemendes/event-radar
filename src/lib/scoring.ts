@@ -62,26 +62,124 @@ const EVENT_FACTS = {
  * overwrite a score a speaker has already seen or corrected. `limit` bounds
  * one invocation; call it again to work through a backlog.
  */
-export async function scoreForSpeaker(
-  userId: string,
-  opts: { limit?: number } = {},
-): Promise<ScoringOutcome> {
-  const limit = Math.min(Math.max(opts.limit ?? 100, 1), 500);
 
-  /* Upcoming and undated events only. Scoring a conference that already
-     happened spends money on a row nobody can act on. */
+/* ── Surface-agnostic halves ───────────────────────────────────────────────
+ * Scoring is three steps: pick the events, render the brief, write the
+ * verdicts. Only the middle one needs a model, and the API deliberately does
+ * not care where that model runs — the web app has server credentials and
+ * calls Anthropic itself, while an MCP client brings its own subscription and
+ * does the judging in the conversation.
+ *
+ * Both surfaces therefore share these three functions rather than reimplement
+ * them. That is the point: a score submitted by a connector is selected from
+ * the same pool, judged against the same rubric, and validated by the same
+ * normaliseScore as one the server produced, so the two are indistinguishable
+ * in how they are constrained. A second implementation is how the surfaces
+ * would drift apart, which has already happened once on this branch.
+ */
+
+/** The events this speaker has no judgement for yet, oldest first.
+ *  Upcoming and undated only — scoring a conference that already happened
+ *  spends effort on a row nobody can act on. */
+export async function selectUnscoredEvents(userId: string, limit: number) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const events = await db.event.findMany({
+  return db.event.findMany({
     where: {
       OR: [{ startDate: { gte: today } }, { startDate: null }],
       opportunities: { none: { userId, relevancyScore: { not: null } } },
     },
     select: EVENT_FACTS,
     orderBy: [{ startDate: { sort: "asc", nulls: "last" } }],
-    take: limit,
+    take: Math.min(Math.max(limit, 1), 500),
   });
+}
+
+export interface ScoringBrief {
+  speakerBlock: string;
+  rubricBlock: string;
+  geographyLine: string;
+}
+
+/** This speaker's brief and rubric, rendered from their stored profile. */
+export async function buildScoringBrief(userId: string): Promise<ScoringBrief> {
+  const row = await db.speakerProfile.findUnique({ where: { userId } });
+  const profile = profileFromRow(row as unknown as Record<string, unknown> | null);
+  return {
+    speakerBlock: buildSpeakerProfile(profile, "full"),
+    rubricBlock: buildScoringRubric(profile),
+    geographyLine: buildGeographyLine(profile),
+  };
+}
+
+export interface ScoreSubmission {
+  eventId: string;
+  [field: string]: unknown;
+}
+
+export interface ApplyOutcome {
+  written: number;
+  /** Already carried a score, so left alone. */
+  skipped: number;
+  /** eventId not in the catalogue, or the entry had no usable eventId. */
+  rejected: number;
+}
+
+/**
+ * Write submitted scores to this speaker's own opportunity rows.
+ *
+ * Every entry goes through normaliseScore, so a value outside the allowed set
+ * becomes null rather than reaching the database — the same treatment the
+ * server's own model output gets, because a connector's output is no more
+ * trusted than an API reply.
+ *
+ * Rows that ALREADY carry a score are skipped, never overwritten. That is the
+ * guarantee the server path gets for free by only ever selecting unscored
+ * events; submitting scores directly would lose it, and with it the promise
+ * that a score a speaker corrected by hand survives a re-run.
+ */
+export async function applyScores(
+  userId: string,
+  submissions: ScoreSubmission[],
+): Promise<ApplyOutcome> {
+  const out: ApplyOutcome = { written: 0, skipped: 0, rejected: 0 };
+
+  const ids = submissions
+    .map((s) => (typeof s?.eventId === "string" ? s.eventId : null))
+    .filter((id): id is string => !!id);
+
+  /* One query rather than one per entry: confirms the events exist, and finds
+     which already carry a score for this speaker. */
+  const known = await db.event.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, opportunities: { where: { userId }, select: { relevancyScore: true } } },
+  });
+  const existing = new Map(known.map((e) => [e.id, e.opportunities[0]?.relevancyScore ?? null]));
+
+  for (const entry of submissions) {
+    const eventId = typeof entry?.eventId === "string" ? entry.eventId : null;
+    if (!eventId || !existing.has(eventId)) { out.rejected++; continue; }
+    if (existing.get(eventId) !== null) { out.skipped++; continue; }
+
+    const data = normaliseScore(entry);
+    await db.eventOpportunity.upsert({
+      where: { userId_eventId: { userId, eventId } },
+      create: { userId, eventId, status: "DISCOVERED", ...data },
+      update: data,
+    });
+    out.written++;
+  }
+
+  return out;
+}
+
+export async function scoreForSpeaker(
+  userId: string,
+  opts: { limit?: number } = {},
+): Promise<ScoringOutcome> {
+  /* Shared with the client-side path, so both surfaces score the same pool. */
+  const events = await selectUnscoredEvents(userId, opts.limit ?? 100);
 
   if (events.length === 0) return { ok: true, scored: 0, considered: 0 };
 
@@ -90,11 +188,9 @@ export async function scoreForSpeaker(
     return { ok: false, scored: 0, considered: events.length, error: "Anthropic credentials not configured", status: 503 };
   }
 
-  const row = await db.speakerProfile.findUnique({ where: { userId } });
-  const profile = profileFromRow(row as unknown as Record<string, unknown> | null);
-  const speakerBlock = buildSpeakerProfile(profile, "full");
-  const rubricBlock = buildScoringRubric(profile);
-  const geographyLine = buildGeographyLine(profile);
+  /* Shared with the client-side path, so both surfaces judge against the same
+     rubric — the only remaining difference is which model reads it. */
+  const { speakerBlock, rubricBlock, geographyLine } = await buildScoringBrief(userId);
 
   let scored = 0;
 

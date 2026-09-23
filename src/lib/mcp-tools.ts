@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { speakerConditions, badgeCountWhere } from "@/lib/event-filter";
 import { mergeEventWithOpportunity } from "@/lib/opportunity";
 import { getApplicantProfile } from "@/lib/settings";
-import { scoreForSpeaker } from "@/lib/scoring";
+import { scoreForSpeaker, selectUnscoredEvents, buildScoringBrief, applyScores, type ScoreSubmission } from "@/lib/scoring";
+import { renderEventFacts, LIKELIHOODS, ACTIONS, CATEGORIES } from "@/lib/scoring-parse";
 import { MAX_LIMIT } from "@/lib/pagination";
 
 /**
@@ -237,6 +238,96 @@ export function registerEventRadarTools(server: Registrable, userId: string) {
         note: r.scored === 0 && r.considered === 0
           ? "Nothing left to score."
           : "Call again to score more of the backlog.",
+      });
+    },
+  );
+
+
+/* ── Scoring on the caller's own model ────────────────────────────────────
+ * score_my_inbox spends the DEPLOYMENT's Anthropic credentials. These two do
+ * the same job on the credentials of whoever is connected: the server hands
+ * over the events and the rubric, the model in this conversation judges them,
+ * and the verdicts come back to be validated and written.
+ *
+ * Worth choosing deliberately between them. This pair costs the caller context
+ * and time but needs no server-side key, and judges on whatever model the
+ * person is actually running. score_my_inbox is one call and survives a closed
+ * conversation, which is why the weekly cron uses it.
+ */
+  server.registerTool(
+    "get_scoring_batch",
+    {
+      title: "Get events to score yourself",
+      description:
+        "Fetch unscored events plus YOUR speaker brief and rubric, so you can judge them here " +
+        "rather than spending the server's model credits. Judge each event against the brief, " +
+        "then send the verdicts to save_scores. Use a modest limit — every event costs context. " +
+        "Prefer score_my_inbox instead when the deployment has its own credentials and you just " +
+        "want the backlog cleared.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(100).optional()
+          .describe(`How many to fetch (default ${SCORE_DEFAULT}). Each one costs context.`),
+      },
+    },
+    async (a: Record<string, never>) => {
+      const { limit } = a as unknown as { limit?: number };
+      const n = limit ?? SCORE_DEFAULT;
+      const [events, brief] = await Promise.all([
+        selectUnscoredEvents(userId, n),
+        buildScoringBrief(userId),
+      ]);
+
+      return json({
+        total: events.length,
+        events: events.map((e, i) => ({ eventId: e.id, facts: renderEventFacts(e, i) })),
+        brief,
+        /* Named, because normaliseScore discards anything outside these on the
+           way in — a caller should not have to guess and lose the work. */
+        allowed: {
+          relevancyScore: "integer 0-100",
+          acceptanceLikelihood: LIKELIHOODS,
+          suggestedAction: ACTIONS,
+          category: CATEGORIES,
+          employerRelevant: "boolean",
+        },
+        next: events.length
+          ? "Judge each against `brief`, then call save_scores with one entry per eventId."
+          : "Nothing left to score.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "save_scores",
+    {
+      title: "Save scores you judged",
+      description:
+        "Write verdicts from get_scoring_batch to YOUR rows. Every entry is validated — a value " +
+        "outside the allowed set is discarded rather than stored. An event that already has a " +
+        "score is left alone, never overwritten, so a score you corrected by hand survives. " +
+        "Only send events you actually judged; omitting one leaves it for next time.",
+      inputSchema: {
+        scores: z.array(z.object({
+          eventId: z.string().describe("From get_scoring_batch"),
+          relevancyScore: z.number().int().min(0).max(100).optional(),
+          relevancyRationale: z.string().optional().describe("1-2 sentences, for this speaker"),
+          acceptanceLikelihood: z.enum(LIKELIHOODS).optional(),
+          acceptanceRationale: z.string().optional(),
+          suggestedAction: z.enum(ACTIONS).optional(),
+          category: z.enum(CATEGORIES).optional(),
+          employerRelevant: z.boolean().optional(),
+        })).min(1).describe("One entry per event you judged"),
+      },
+    },
+    async (a: Record<string, never>) => {
+      const { scores } = a as unknown as { scores: ScoreSubmission[] };
+      const outcome = await applyScores(userId, scores);
+      return json({
+        ...outcome,
+        note: [
+          outcome.skipped ? `${outcome.skipped} already had a score and were left alone.` : null,
+          outcome.rejected ? `${outcome.rejected} had no matching event and were rejected.` : null,
+        ].filter(Boolean).join(" ") || undefined,
       });
     },
   );
