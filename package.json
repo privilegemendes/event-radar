@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "if [ \"$VERCEL_ENV\" = \"production\" ]; then echo \"> applying pending migrations\" && prisma migrate deploy; fi && next build",
     "start": "next start",
     "lint": "eslint",
     "auto-discovery": "node scripts/auto-discovery.mjs",
