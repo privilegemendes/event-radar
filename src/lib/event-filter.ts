@@ -207,3 +207,16 @@ export function byScoreThenDate(a: RankableRow, b: RankableRow): number {
 
   return time(a.startDate) - time(b.startDate);
 }
+
+/**
+ * Rank a full result set, then take the page.
+ *
+ * The order matters and is easy to get backwards. The score lives on the
+ * opportunity, not the event, so it cannot be an ORDER BY — which means taking
+ * the page in SQL first would hand the ranking the EARLIEST rows and return
+ * "the best of the first 25" rather than "the best 25". Fetch, rank, then
+ * slice. Callers that rank in the database do not need this.
+ */
+export function rankThenPage<T extends RankableRow>(rows: T[], skip: number, take: number): T[] {
+  return [...rows].sort(byScoreThenDate).slice(skip, skip + take);
+}
