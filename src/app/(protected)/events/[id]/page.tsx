@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import {
   EVENT_TYPE_STYLES, STATUS_STYLES, STATUS_ORDER,
   EVENT_TYPES, EVENT_STATUSES, REGIONS, LIKELIHOOD_STYLES,
@@ -257,7 +258,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Back + Delete */}
         <div className="flex items-center justify-between mb-4">
-          <Link href="/" className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/30 hover:text-coder-purple transition-colors">← Back</Link>
+          <BackLink />
           {isAdmin && (
             <button onClick={deleteEvent} className="font-mono text-[9px] uppercase tracking-[0.08em] text-coder-coral/50 hover:text-coder-coral transition-colors">Delete</button>
           )}
@@ -387,7 +388,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         {/* Apply helper (admin) */}
-        {isAdmin && (
+        {/* Every signed-in speaker: autofill reads THEIR profile and writes
+            nothing shared. It was admin-gated from when the owner was the only
+            speaker. */}
+        {(
           <div className="mb-5">
             <button
               onClick={() => setShowApply(true)}
@@ -410,7 +414,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ══════════════ ATTENDING TOGGLE ══════════════ */}
-      {isAdmin && (
+      {/* `attending` is per-speaker — it lives on the viewer's own
+          EventOpportunity, and PUT /api/events/[id] already accepts it from any
+          session. Only the UI was blocking it. */}
+      {(
         <div className="mb-5 flex items-center gap-3">
           <button
             onClick={async () => {
@@ -445,7 +452,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             checklist={isSpeakingGig ? SPEAKING_CHECKLIST : ATTENDING_CHECKLIST}
             stages={isSpeakingGig ? GIG_STAGES : ATTEND_STAGES}
             accent={isSpeakingGig ? BRAND.purple : BRAND.cyan}
-            isAdmin={isAdmin}
+            canEdit
             onReadinessChange={(_, next) => setEvent((p) => p ? { ...p, readiness: JSON.stringify(next) } : p)}
             onPrepStageChange={(_, stage) => setEvent((p) => p ? { ...p, prepStage: stage } : p)}
             onCustomTasksChange={(_, tasks) => setEvent((p) => p ? { ...p, customTasks: JSON.stringify(tasks) } : p)}
@@ -454,7 +461,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* ══════════════ SUGGESTED APPLICATION ══════════════ */}
-      {isAdmin && (
+      {/* pitchDraft is per-speaker, and the generate route writes only the
+          caller's own row. A speaker who cannot draft their own application
+          cannot use the product. */}
+      {(
         <div className="bg-coder-panel border border-white/[0.08] rounded-xl p-4 mb-5">
           <div className="flex items-center justify-between mb-3">
             <div>

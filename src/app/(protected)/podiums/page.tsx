@@ -40,16 +40,16 @@ export default function PodiumsPage() {
   const router = useRouter();
   const [events,  setEvents]  = useState<PodiumEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/events?view=podium").then((r) => r.json()),
-      fetch("/api/auth/me").then((r) => r.json()).catch(() => null),
-    ]).then(([evs, userOk]) => {
-      setEvents(Array.isArray(evs) ? evs as PodiumEvent[] : []);
-      setIsAdmin((userOk as { role?: string } | null)?.role === "ADMIN");
-    }).catch(() => {}).finally(() => setLoading(false));
+    /* No role probe any more: the readiness checklist is the viewer's own
+       EventOpportunity, so every signed-in speaker may edit it. The page is
+       already owner-gated server-side in its layout. */
+    fetch("/api/events?view=podium")
+      .then((r) => r.json())
+      .then((evs) => setEvents(Array.isArray(evs) ? evs as PodiumEvent[] : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   /* Local optimistic update helpers */
@@ -153,7 +153,7 @@ export default function PodiumsPage() {
                     checklist={SPEAKING_CHECKLIST}
                     stages={GIG_STAGES}
                     accent={BRAND.purple}
-                    isAdmin={isAdmin}
+                    canEdit
                     onReadinessChange={(id, next) => updateEvent(id, { readiness: JSON.stringify(next) })}
                     onPrepStageChange={(id, stage) => updateEvent(id, { prepStage: stage })}
                     onCustomTasksChange={(id, tasks) => updateEvent(id, { customTasks: JSON.stringify(tasks) })}
@@ -184,7 +184,7 @@ export default function PodiumsPage() {
                     checklist={ATTENDING_CHECKLIST}
                     stages={ATTEND_STAGES}
                     accent={BRAND.cyan}
-                    isAdmin={isAdmin}
+                    canEdit
                     onReadinessChange={(id, next) => updateEvent(id, { readiness: JSON.stringify(next) })}
                     onPrepStageChange={(id, stage) => updateEvent(id, { prepStage: stage })}
                     onCustomTasksChange={(id, tasks) => updateEvent(id, { customTasks: JSON.stringify(tasks) })}

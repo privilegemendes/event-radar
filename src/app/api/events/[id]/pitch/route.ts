@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveAnthropic, messagesUrl } from "@/lib/anthropic";
-import { requireAdmin, authErrorResponse } from "@/lib/session";
+import { requireSession, authErrorResponse } from "@/lib/session";
 import { getApplicantProfile } from "@/lib/settings";
 import { speakerName, parseList, parsePronouns } from "@/lib/speaker-brief";
 
@@ -10,7 +10,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAdmin();
+    /* Any signed-in speaker: the upsert below writes only session.userId's own
+       opportunity row, and a speaker who cannot draft their own application has
+       no use for the rest of the app. Same reasoning as scoring. */
+    const session = await requireSession();
 
     const { id } = await params;
     const event = await db.event.findUnique({
