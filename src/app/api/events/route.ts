@@ -5,6 +5,7 @@ import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { mergeEventWithOpportunity, OPPORTUNITY_WIRE_FIELDS } from "@/lib/opportunity";
 import { speakerConditions, upcomingOrUndated, byScoreThenDate } from "@/lib/event-filter";
+import { parsePage } from "@/lib/pagination";
 
 /**
  * Named data contracts for the list endpoint. This route returns every matching
@@ -116,12 +117,32 @@ export async function GET(request: NextRequest) {
       ? Object.fromEntries(Object.entries(VIEWS[view]).filter(([k]) => !personal.has(k)))
       : undefined;
 
+    /* Opt-in pagination. With no `limit` both are undefined, so the query and
+       its payload are exactly what they were.
+
+       The inbox is the exception, and it matters: it ranks by this speaker's
+       own score, which lives on the opportunity and is therefore sorted in JS
+       AFTER the query (see byScoreThenDate below). Taking 25 rows in SQL first
+       would hand that sort the 25 EARLIEST events and rank those — not the 25
+       highest-scoring, which is what the caller asked for. So the inbox pages
+       in memory instead: the full set is fetched, ranked, then sliced. Slower,
+       and correct; every other view keeps the chronological orderBy the
+       database can satisfy directly. */
+    const page = parsePage(searchParams);
+    const ranksInMemory = view === "inbox";
+    const sqlPage = ranksInMemory ? { take: undefined, skip: undefined } : { take: page.take, skip: page.skip };
+
     // Prisma rejects `select` and `omit` in the same query, so the two shapes are
-    // separate calls. Both share `where` and `orderBy`.
+    // separate calls. Both share `where`, `orderBy` and the page bounds.
     const rows = viewSelect
-      ? await db.event.findMany({ where, select: { ...viewSelect, id: true, opportunities }, orderBy })
+      ? await db.event.findMany({
+          where, select: { ...viewSelect, id: true, opportunities }, orderBy,
+          take: sqlPage.take, skip: sqlPage.skip,
+        })
       : await db.event.findMany({
           where,
+          take: sqlPage.take,
+          skip: sqlPage.skip,
           // Trim fields no list view renders — this endpoint returns every event, so
           // they are pure transfer cost. The detail route still returns the full row.
           // `ownerOnly` and `createdAt` stay usable above for filtering and ordering.
@@ -147,9 +168,26 @@ export async function GET(request: NextRequest) {
        chronological orderBy above, which is what a calendar, a map and a podium
        all want. Sorted here rather than in the query because the score lives on
        the opportunity — see byScoreThenDate. */
-    if (view === "inbox") merged.sort(byScoreThenDate as (a: unknown, b: unknown) => number);
+    if (ranksInMemory) merged.sort(byScoreThenDate as (a: unknown, b: unknown) => number);
 
-    return NextResponse.json(merged);
+    /* The response stays a bare ARRAY so every existing caller is untouched;
+       the total rides in a header instead. */
+    if (!page.paginated) return NextResponse.json(merged);
+
+    /* Ranked views were fetched whole, so their page is taken here — after the
+       ranking — and the total is already in hand. Everything else was paged by
+       the database and needs a COUNT for the total. */
+    const body = ranksInMemory
+      ? merged.slice(page.skip ?? 0, (page.skip ?? 0) + (page.take ?? merged.length))
+      : merged;
+    const total = ranksInMemory ? merged.length : await db.event.count({ where });
+
+    return NextResponse.json(body, {
+      headers: {
+        "X-Total-Count": String(total),
+        "X-Returned-Count": String(body.length),
+      },
+    });
   } catch (err) {
     const authed = authErrorResponse(err);
     if (authed) return authed;

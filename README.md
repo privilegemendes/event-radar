@@ -210,6 +210,21 @@ Notes worth keeping:
   proven under load.
 - **Commit author matters.** A deployment is blocked when the commit author is
   not a member of the Vercel account.
+- **Migrations run in the production build**, not by hand: `npm run build`
+  applies pending migrations before compiling, so the schema is always ahead of
+  the code that needs it, and a failed migration fails the build. It is guarded
+  on `VERCEL_ENV=production` because **previews share the production database** —
+  unguarded, every preview would migrate production before its PR merged. The
+  cost of that guard: a preview of a branch adding a migration runs without it
+  and shows errors that resolve on merge. Give previews their own database and
+  the guard can go. For a one-off run outside a deploy,
+  `scripts/migrate-prod.sh` refuses when the database it resolved is not the one
+  it announced.
+- **`BETTER_AUTH_URL` pins the MCP resource identifier.** OAuth tokens are
+  audience-bound to `<BETTER_AUTH_URL>/api/mcp`; without it the app falls back
+  to Vercel's per-deployment hostname and every issued token stops validating on
+  the next push. It must match the origin a connector actually calls, so it
+  changes with the domain.
 
 ## Tech Stack
 

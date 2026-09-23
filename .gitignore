@@ -46,3 +46,6 @@ next-env.d.ts
 cookie
 
 exports/
+
+# Personal Claude Code overrides (permission rules) — not shared
+.claude/settings.local.json

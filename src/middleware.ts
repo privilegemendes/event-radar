@@ -37,6 +37,11 @@ export async function middleware(request: NextRequest) {
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname.startsWith("/api/auth") ||
+    /* OAuth discovery. RFC 9728 and RFC 8414 REQUIRE these at the origin root,
+       and a client fetches them before it has any credentials — redirecting
+       them to /login makes the app undiscoverable to an MCP connector, which
+       reads the HTML and fails. */
+    pathname.startsWith("/.well-known/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     isPublicAsset(pathname)

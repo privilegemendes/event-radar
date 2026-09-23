@@ -1,4 +1,6 @@
 import { betterAuth } from "better-auth";
+import { jwt } from "better-auth/plugins";
+import { mcp } from "@better-auth/mcp";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
@@ -69,6 +71,34 @@ function resolveTrustedOrigins(): string[] {
   return [...origins];
 }
 
+/**
+ * The canonical protected-resource identifier for the MCP server (RFC 8707 /
+ * RFC 9728). Tokens are audience-bound to it and it is published in the
+ * protected resource metadata, so it must be the URL a client actually calls.
+ *
+ * Must be HTTPS, except on loopback for local development — which is exactly
+ * what resolveBaseURL() already returns, so this follows it rather than being
+ * configured separately and drifting.
+ */
+function resolveMcpResource(): string {
+  const base = resolveBaseURL() ?? "http://localhost:3000";
+  return `${base.replace(/\/$/, "")}/api/mcp`;
+}
+
+export const MCP_RESOURCE = resolveMcpResource();
+
+/**
+ * Scopes this MCP resource accepts.
+ *
+ * Declared explicitly rather than left unset. The plugin treats an unset
+ * `allowedScopes` as "unrestricted" by checking for null — but Prisma cannot
+ * round-trip a null scalar list: Postgres stores NULL and Prisma reads it back
+ * as `[]`, which that same check reads as "no scope is allowed", and every
+ * authorization then fails with invalid_scope. Naming the scopes side-steps the
+ * ambiguity entirely and documents what a connector may ask for.
+ */
+export const MCP_SCOPES = ["openid", "profile", "email", "offline_access"];
+
 export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
 
@@ -119,4 +149,44 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days, matching the sessions being replaced
     updateAge: 60 * 60 * 24,     // refresh the expiry at most once a day
   },
+
+  /**
+   * MCP authorization.
+   *
+   * mcp() turns this app into an OAuth 2.1 authorization server AND the
+   * protected resource for /api/mcp, so a client like a claude.ai custom
+   * connector can discover it, send the person to /login to authenticate, ask
+   * them to approve at /consent, and come back holding a token bound to this
+   * resource. That is why a connector "opens a web page and returns" — the two
+   * pages are ours, and the person authenticates as themselves rather than
+   * through a shared service credential.
+   *
+   * jwt() supplies the signing keys mcp() issues and verifies tokens with.
+   *
+   * Registration needs BOTH flags, and they mean different things:
+   *   - allowDynamicClientRegistration opens the RFC 7591 endpoint at all;
+   *   - allowUnauthenticatedClientRegistration lets a caller reach it without
+   *     an existing session or initial access token.
+   * A custom connector registers itself from the client's own backend, before
+   * any browser has been opened, so it has neither — with only the first flag
+   * the endpoint answers "Authentication required for client registration" and
+   * the connector cannot complete its first handshake.
+   *
+   * What makes open registration acceptable: registering mints a CLIENT, not a
+   * grant. No token exists until a signed-in person approves that named client
+   * on /consent, and issued tokens are audience-bound to MCP_RESOURCE. The
+   * consent screen is therefore the real gate, which is why it names the client
+   * and where it will send you rather than saying "an app".
+   */
+  plugins: [
+    jwt(),
+    mcp({
+      loginPage: "/login",
+      consentPage: "/consent",
+      resource: MCP_RESOURCE,
+      resources: [{ identifier: MCP_RESOURCE, name: "Event Radar MCP", allowedScopes: MCP_SCOPES }],
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
+    }),
+  ],
 });
