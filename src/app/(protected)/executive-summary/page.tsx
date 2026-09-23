@@ -63,7 +63,6 @@ export default function ExecutiveSummaryPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -73,7 +72,6 @@ export default function ExecutiveSummaryPage() {
   };
   useEffect(() => {
     load();
-    fetch("/api/auth/me").then((r) => r.json()).then((d) => setIsAdmin(d?.role === "ADMIN")).catch(() => {});
   }, []);
 
   const regenerate = async () => {
@@ -92,10 +90,12 @@ export default function ExecutiveSummaryPage() {
         <div>
           <h1 className="text-xl font-semibold text-white">Executive Summary & Recommendations</h1>
           <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/30 mt-1">
-            AI-generated strategy over all Event Radar data{generatedAt ? ` · updated ${new Date(generatedAt).toLocaleString("en-GB")}` : ""}
+            AI-generated strategy over your Event Radar data{generatedAt ? ` · updated ${new Date(generatedAt).toLocaleString("en-GB")}` : ""}
           </p>
         </div>
-        {isAdmin && (
+        {/* Every speaker generates their own: the stats, the brief and the
+            stored summary are all scoped to the caller. */}
+        {(
           <button onClick={regenerate} disabled={busy}
             className="flex items-center gap-2 px-4 py-2 bg-coder-purple hover:bg-coder-purple-hover disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors">
             {busy ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-black/25 border-t-black rounded-full" /><span className="font-mono text-[10px] uppercase tracking-[0.08em]">Generating…</span></> : <span className="font-mono text-[10px] uppercase tracking-[0.08em]">Regenerate summary</span>}
@@ -127,7 +127,7 @@ export default function ExecutiveSummaryPage() {
         {summary ? <Markdown md={summary} /> : (
           <div className="py-12 text-center">
             <p className="text-white/40 text-sm">No summary generated yet.</p>
-            {isAdmin && <p className="font-mono text-[10px] text-white/30 mt-2">Click “Regenerate summary” to create one.</p>}
+            <p className="font-mono text-[10px] text-white/30 mt-2">Click “Regenerate summary” to create one.</p>
           </div>
         )}
       </div>

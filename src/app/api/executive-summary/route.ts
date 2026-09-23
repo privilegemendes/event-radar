@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveAnthropic, messagesUrl } from "@/lib/anthropic";
-import { requireSession, requireAdmin, authErrorResponse, type Session } from "@/lib/session";
+import { requireSession, authErrorResponse, type Session } from "@/lib/session";
 import { getSetting, setSetting } from "@/lib/settings";
 import { deriveCategory } from "@/lib/events";
 import { costBucket } from "@/lib/constants";
@@ -117,11 +117,15 @@ export async function GET() {
 export async function POST() {
   /* This route needs the session itself (for isOwner) and has no try/catch of
      its own, so the guard is wrapped rather than the whole handler.
-     Behaviour note: an anonymous caller now gets 401 instead of the 403 this
-     route alone used to return — every other route already answered 401. */
+
+     requireSession, not requireAdmin: the summary is per speaker end to end —
+     computeStats reads the caller's own opportunities, the brief is their own
+     profile, and it is stored under a key scoped to their user id. Generation
+     therefore touches nobody else's data, and an admin-only gate left a MEMBER
+     staring at "No summary generated yet" with no way to generate one. */
   let session: Session;
   try {
-    session = await requireAdmin();
+    session = await requireSession();
   } catch (err) {
     const authed = authErrorResponse(err);
     if (authed) return authed;
