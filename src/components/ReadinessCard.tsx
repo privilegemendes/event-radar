@@ -27,7 +27,11 @@ interface ReadinessCardProps {
   stages: StageItem[];
   /** Purple for speaking gigs, cyan for attending. */
   accent: BrandAccent;
-  isAdmin: boolean;
+  /** Whether the viewer may change this checklist. Readiness, prep stage and
+   *  custom tasks all live on the viewer's own EventOpportunity, so this is
+   *  true for any signed-in speaker — it used to be an canEdit flag, which left
+   *  a MEMBER looking at their own checklist unable to tick anything. */
+  canEdit: boolean;
   onReadinessChange?: (id: string, next: Record<string, boolean>) => void;
   onPrepStageChange?: (id: string, stage: string | null) => void;
   onCustomTasksChange?: (id: string, tasks: CustomTask[]) => void;
@@ -64,7 +68,7 @@ async function save(id: string, body: Record<string, unknown>) {
 }
 
 export default function ReadinessCard({
-  event, checklist, stages, accent, isAdmin,
+  event, checklist, stages, accent, canEdit,
   onReadinessChange, onPrepStageChange, onCustomTasksChange,
 }: ReadinessCardProps) {
 
@@ -73,7 +77,7 @@ export default function ReadinessCard({
   const [stageSaving, setStageSaving] = useState(false);
 
   const setStage = async (key: string) => {
-    if (!isAdmin || stageSaving) return;
+    if (!canEdit || stageSaving) return;
     const next = prepStage === key ? null : key; // clicking active stage clears it
     setPrepStage(next);
     setStageSaving(true);
@@ -88,7 +92,7 @@ export default function ReadinessCard({
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   const toggleTemplate = async (key: string) => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     const next = { ...readinessState, [key]: !readinessState[key] };
     setReadinessState(next);
     setSavingKey(key);
@@ -110,7 +114,7 @@ export default function ReadinessCard({
   };
 
   const toggleCustom = async (taskId: string) => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     const next = customTasks.map((t) => t.id === taskId ? { ...t, done: !t.done } : t);
     setCustomTasks(next);
     setSavingTaskId(taskId);
@@ -120,7 +124,7 @@ export default function ReadinessCard({
 
   const addTask = async () => {
     const label = newLabel.trim();
-    if (!label || !isAdmin) return;
+    if (!label || !canEdit) return;
     const next = [...customTasks, { id: `${Date.now()}`, label, done: false }];
     setCustomTasks(next);
     setNewLabel("");
@@ -128,7 +132,7 @@ export default function ReadinessCard({
   };
 
   const deleteTask = async (taskId: string) => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     const next = customTasks.filter((t) => t.id !== taskId);
     setCustomTasks(next);
     await persistCustomTasks(next);
@@ -181,10 +185,10 @@ export default function ReadinessCard({
                 <div key={stage.key} className="flex items-center flex-shrink-0">
                   <button
                     onClick={() => setStage(stage.key)}
-                    disabled={!isAdmin || stageSaving}
-                    title={isAdmin ? (isActive ? "Click to clear stage" : `Set stage: ${stage.label}`) : stage.label}
+                    disabled={!canEdit || stageSaving}
+                    title={canEdit ? (isActive ? "Click to clear stage" : `Set stage: ${stage.label}`) : stage.label}
                     className={`font-mono text-[9px] uppercase tracking-[0.06em] px-2.5 py-1 rounded-md transition-all disabled:cursor-default ${
-                      isAdmin && !isActive ? "hover:opacity-80" : ""
+                      canEdit && !isActive ? "hover:opacity-80" : ""
                     }`}
                     style={
                       isActive ? { background: accent, color: "#000", fontWeight: 700 } :
@@ -215,7 +219,7 @@ export default function ReadinessCard({
             <div
               key={item.key}
               onClick={() => toggleTemplate(item.key)}
-              className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${isAdmin ? "cursor-pointer hover:bg-white/[0.03]" : ""}`}
+              className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${canEdit ? "cursor-pointer hover:bg-white/[0.03]" : ""}`}
             >
               <Checkbox checked={checked} accent={accent} />
               <span className={`text-sm transition-colors flex-1 ${checked ? "text-white/35 line-through decoration-white/20" : "text-white/75"}`}>
@@ -228,14 +232,14 @@ export default function ReadinessCard({
       </div>
 
       {/* ── Custom tasks ── */}
-      {(customTasks.length > 0 || isAdmin) && (
+      {(customTasks.length > 0 || canEdit) && (
         <div className="border-t border-white/[0.06] pt-2 space-y-0.5">
           {customTasks.map((task) => {
             const isSaving = savingTaskId === task.id;
             return (
               <div
                 key={task.id}
-                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors group ${isAdmin ? "cursor-pointer hover:bg-white/[0.03]" : ""}`}
+                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors group ${canEdit ? "cursor-pointer hover:bg-white/[0.03]" : ""}`}
                 onClick={() => toggleCustom(task.id)}
               >
                 <Checkbox checked={task.done} accent={accent} />
@@ -243,7 +247,7 @@ export default function ReadinessCard({
                   {task.label}
                 </span>
                 {isSaving && <span className="font-mono text-[9px] text-white/25 animate-pulse">saving…</span>}
-                {isAdmin && !isSaving && (
+                {canEdit && !isSaving && (
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
                     className="opacity-0 group-hover:opacity-100 text-white/25 hover:text-coder-coral transition-all ml-1 flex-shrink-0"
@@ -259,7 +263,7 @@ export default function ReadinessCard({
           })}
 
           {/* Add task row */}
-          {isAdmin && (
+          {canEdit && (
             <div className="flex items-center gap-2 px-2 pt-1">
               <div className="w-4 h-4 rounded flex-shrink-0 border border-dashed border-white/15" />
               <input
