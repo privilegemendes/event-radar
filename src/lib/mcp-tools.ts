@@ -5,7 +5,8 @@ import { isAdminUser } from "@/lib/user-role";
 import { listEventsForSpeaker } from "@/lib/event-list";
 import { updateEventForSpeaker } from "@/lib/event-update";
 import { mergeEventWithOpportunity } from "@/lib/opportunity";
-import { getApplicantProfile } from "@/lib/settings";
+import { getApplicantProfile, setApplicantProfile } from "@/lib/settings";
+import { mergeProfileUpdate, PROFILE_FIELDS } from "@/lib/profile-update";
 import { scoreForSpeaker, selectUnscoredEvents, buildScoringBrief, applyScores, type ScoreSubmission } from "@/lib/scoring";
 import { renderEventFacts, LIKELIHOODS, ACTIONS, CATEGORIES } from "@/lib/scoring-parse";
 import { buildPitchPrompt, savePitchDraft } from "@/lib/pitch";
@@ -589,6 +590,83 @@ export function registerEventRadarTools(server: Registrable, userId: string, isA
           company: sp.company, region: sp.region, topics: sp.topics,
         })),
       });
+    },
+  );
+
+  server.registerTool(
+    "get_my_profile",
+    {
+      title: "Get my applicant profile",
+      description:
+        "YOUR saved details — the ones application forms ask for, and the brief that steers how " +
+        "events are scored for you. Call this when apply_to_event reports missing fields, or " +
+        "before changing anything, so you know what is already set. Yours alone; no other " +
+        "speaker's profile is reachable.",
+      inputSchema: {},
+    },
+    async () => {
+      const profile = await getApplicantProfile(userId);
+      const missing = PROFILE_FIELDS.filter((k) => !String(profile[k] ?? "").trim());
+      return json({
+        profile,
+        missing,
+        note: missing.length
+          ? `${missing.length} field(s) are empty. Forms commonly need linkedin and headshotUrl.`
+          : "Every field is filled.",
+      });
+    },
+  );
+
+  server.registerTool(
+    "update_my_profile",
+    {
+      title: "Update my applicant profile",
+      description:
+        "Change one or more of YOUR profile fields. Only what you pass is changed — everything " +
+        "else is kept, so you can fill a single gap without restating the rest. Pass an empty " +
+        "string to clear a field deliberately. Yours alone.",
+      inputSchema: {
+        /* Applicant fields — what a form asks for. */
+        fullName: z.string().optional(),
+        pronouns: z.string().optional(),
+        jobTitle: z.string().optional(),
+        company: z.string().optional(),
+        email: z.string().optional(),
+        phone: z.string().optional(),
+        location: z.string().optional().describe('e.g. "Amsterdam, NL"'),
+        linkedin: z.string().optional(),
+        twitter: z.string().optional(),
+        website: z.string().optional(),
+        headshotUrl: z.string().optional(),
+        bioShort: z.string().optional(),
+        bioLong: z.string().optional(),
+        talkTopics: z.string().optional(),
+        dietary: z.string().optional().describe("Dietary or access needs"),
+        /* Brief fields — these steer discovery and scoring, not forms. */
+        speakingLevel: z.string().optional(),
+        signatureTopics: z.string().optional(),
+        homeGeographies: z.string().optional(),
+        credentials: z.string().optional(),
+        employerAngle: z.string().optional(),
+        excludedDomains: z.string().optional(),
+        privateKeywords: z.string().optional().describe("Events matching these are hidden from shared views"),
+        rubricOverride: z.string().optional(),
+      },
+    },
+    async (a: Record<string, never>) => {
+      const partial = a as unknown as Record<string, unknown>;
+      const named = Object.keys(partial).filter((k) => partial[k] !== undefined);
+      if (named.length === 0) return json({ error: "Nothing to change — pass at least one field." });
+
+      /* Read, merge, write. The HTTP route REPLACES the profile, which is right
+         for a form that submits everything and wrong here: changing linkedin
+         alone through that shape would erase the name, bio and topics. */
+      const current = await getApplicantProfile(userId);
+      const next = mergeProfileUpdate(current, partial);
+      const saved = await setApplicantProfile(next, userId);
+
+      const missing = PROFILE_FIELDS.filter((k) => !String(saved[k] ?? "").trim());
+      return json({ changed: named, missing, profile: saved });
     },
   );
 
