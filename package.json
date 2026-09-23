@@ -26,6 +26,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^30.0.0",
@@ -38,6 +39,7 @@
     "jest-environment-node": "^30.5.2",
     "tailwindcss": "^4",
     "tsx": "^4.19.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "zod": "^4.6.5"
   }
 }
