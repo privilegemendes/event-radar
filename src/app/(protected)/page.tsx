@@ -66,6 +66,14 @@ export default function OverviewPage() {
       new Date(ev.startDate) >= new Date(now.toDateString()) &&
       new Date(ev.startDate) <= weekAhead)
     .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime());
+  /* Capped: a full week of a 1300-event catalogue ran to 56 rows, which made
+     the dashboard one long scroll rather than a summary. The rest live on the
+     Calendar, which is organised by date and is where "what else is on this
+     week" actually belongs. */
+  const COMING_UP_LIMIT = 10;
+  const comingUpShown = comingUp.slice(0, COMING_UP_LIMIT);
+  const comingUpHidden = comingUp.length - comingUpShown.length;
+
   const registerLink = (ev: Event) =>
     ev.url || (ev.howToApply && /^https?:\/\//.test(ev.howToApply.trim()) ? ev.howToApply.trim() : null);
 
@@ -116,7 +124,7 @@ export default function OverviewPage() {
             <span className="font-mono text-[10px] text-white/30">{comingUp.length}</span>
           </div>
           <div className="space-y-1.5">
-            {comingUp.map((ev) => {
+            {comingUpShown.map((ev) => {
               const link = registerLink(ev);
               return (
                 <div key={ev.id}
@@ -151,6 +159,13 @@ export default function OverviewPage() {
               );
             })}
           </div>
+
+          {comingUpHidden > 0 && (
+            <Link href="/calendar"
+              className="mt-2 flex items-center justify-center gap-2 py-2 rounded-xl border border-white/[0.07] hover:border-coder-green/30 hover:bg-coder-panel-alt transition-colors font-mono text-[10px] uppercase tracking-[0.08em] text-white/35 hover:text-coder-green">
+              {comingUpHidden} more this week — open calendar →
+            </Link>
+          )}
         </div>
       )}
 
