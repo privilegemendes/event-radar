@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
 /**
+ * Files in `public/` are served from the root, not from `/public/…` — so
+ * `public/logo.svg` is requested as `/logo.svg` and is caught by the gate
+ * below like any page would be. An <img> on the sign-in page then resolves to
+ * a 307 at the login screen instead of the image, and renders broken.
+ *
+ * Anything with a file extension is a static asset, never a page route in this
+ * app. These are public by nature: a logo and the map's geojson.
+ */
+function isPublicAsset(pathname: string): boolean {
+  return /\.[a-zA-Z0-9]+$/.test(pathname);
+}
+
+/**
  * Redirect-only gate.
  *
  * This checks that a session cookie EXISTS; it does not validate it. Better
@@ -25,7 +38,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/signup" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
+    pathname.startsWith("/favicon") ||
+    isPublicAsset(pathname)
   ) {
     return NextResponse.next();
   }
@@ -51,5 +65,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public/).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
