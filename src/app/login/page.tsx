@@ -4,8 +4,8 @@ import { signIn } from "@/lib/auth-client";
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,14 +58,12 @@ export default function LoginPage() {
         {/* Logo + headings */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/5 border border-white/10 mb-5">
-            <Image src="/coder-logo.svg" alt="Coder" width={36} height={36} />
+            <Image src="/event-radar-logo-dark-mode.svg" alt="" width={36} height={36} />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
             Event Radar
           </h1>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/30 mt-2">
-            Internal Coder Tool
-          </p>
+
         </div>
 
         {/* Form */}
@@ -85,7 +83,7 @@ export default function LoginPage() {
               required
               autoComplete="email"
               className="w-full px-3.5 py-2.5 bg-coder-control border border-white/10 rounded-lg text-white placeholder-white/20 text-sm focus:outline-none focus:border-coder-purple focus:ring-1 focus:ring-coder-purple transition-colors"
-              placeholder="you@coder.com"
+              placeholder="you@example.com"
             />
           </div>
 
@@ -134,9 +132,6 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-white/20">
-          coder.com · EMEA Partner
-        </p>
       </div>
     </div>
   );

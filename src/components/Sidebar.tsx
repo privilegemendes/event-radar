@@ -37,14 +37,6 @@ const IconInbox = () => (
     <path d="M3 10L5 2h6l2 8"/>
   </svg>
 );
-const IconPartners = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-    <circle cx="5.5" cy="4.5" r="2.5"/>
-    <path d="M1 13.5c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5"/>
-    <circle cx="12" cy="5" r="2"/>
-    <path d="M15 13.5c0-2.21-1.343-4-3-4"/>
-  </svg>
-);
 const IconProfile = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <circle cx="8" cy="5.5" r="2.75"/>
@@ -56,13 +48,6 @@ const IconSettings = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <circle cx="8" cy="8" r="2.5"/>
     <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.42 1.42M11.18 11.18l1.42 1.42M3.4 12.6l1.42-1.42M11.18 4.82l1.42-1.42"/>
-  </svg>
-);
-const IconCoderEvents = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 4h14v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4z"/>
-    <path d="M1 4l7-3 7 3"/>
-    <path d="M6 9h4M6 11.5h2.5"/>
   </svg>
 );
 const IconSpeakers = () => (
@@ -93,8 +78,6 @@ const NAV_ITEMS = [
   { href: "/calendar",  label: "Calendar",  Icon: IconCalendar  },
   { href: "/map",       label: "Map",       Icon: IconMap       },
   { href: "/inbox",     label: "Inbox",     Icon: IconInbox     },
-  { href: "/partners",      label: "Partners",     Icon: IconPartners     },
-  { href: "/coder-events",  label: "Coder Events",  Icon: IconCoderEvents  },
   { href: "/executive-summary", label: "Executive Summary", Icon: IconSummary },
   { href: "/profile",       label: "Profile",       Icon: IconProfile      },
   { href: "/settings",      label: "Settings",      Icon: IconSettings     },
@@ -108,7 +91,6 @@ export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const [inboxCount,       setInboxCount]       = useState<number>(0);
   const [gigsCount,        setGigsCount]        = useState<number>(0);
-  const [coderEventsCount, setCoderEventsCount] = useState<number>(0);
   const [isOwnerUser, setIsOwnerUser] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -118,20 +100,18 @@ export default function Sidebar({ role }: SidebarProps) {
       .then((r) => r.json())
       .then((d: { isOwner?: boolean }) => setIsOwnerUser(!!d?.isOwner))
       .catch(() => setIsOwnerUser(false));
-    // Badge counts — inbox (DISCOVERED), podium (ACCEPTED or attending) and
-    // Coder Events (EMEA). Counted server-side: these are three integers, and
-    // reading them from the full event list cost ~1.8 MB on every navigation.
+    // Badge counts — inbox (DISCOVERED) and podium (ACCEPTED or attending).
+    // Counted server-side: these are two integers, and reading them from the
+    // full event list cost ~1.8 MB on every navigation.
     fetch("/api/events/counts")
       .then((r) => r.json())
-      .then((d: { inbox?: number; gigs?: number; coderEvents?: number }) => {
+      .then((d: { inbox?: number; gigs?: number }) => {
         setInboxCount(d?.inbox ?? 0);
         setGigsCount(d?.gigs ?? 0);
-        setCoderEventsCount(d?.coderEvents ?? 0);
       })
       .catch(() => {
         setInboxCount(0);
         setGigsCount(0);
-        setCoderEventsCount(0);
       });
   }, [pathname]);
 
@@ -180,11 +160,6 @@ export default function Sidebar({ role }: SidebarProps) {
                 {gigsCount}
               </span>
             )}
-            {href === "/coder-events" && coderEventsCount > 0 && (
-              <span className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded bg-coder-purple/20 text-coder-purple font-bold leading-none min-w-[18px] text-center">
-                {coderEventsCount}
-              </span>
-            )}
           </Link>
         );
       })}
@@ -194,15 +169,12 @@ export default function Sidebar({ role }: SidebarProps) {
   const SidebarHeader = () => (
     <div className="px-4 py-4 border-b border-white/[0.07]">
       <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-7 h-7 flex-shrink-0">
-          <Image src="/coder-logo.svg" alt="Coder" width={28} height={28} className="w-7 h-7" />
+        <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+          <Image src="/event-radar-logo-dark-mode.svg" alt="" width={28} height={28} className="w-7 h-7" />
         </div>
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-white leading-tight">
             Event Radar
-          </p>
-          <p className="font-mono text-[9px] uppercase tracking-[0.08em] text-white/30 leading-tight mt-0.5">
-            Coder Internal
           </p>
         </div>
       </div>

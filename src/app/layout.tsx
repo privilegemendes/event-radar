@@ -13,11 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Event Radar — Coder",
+  title: "Event Radar",
   description: "Track and rank AI events to attend, sponsor, and speak at",
-  icons: {
-    icon: "/coder-logo.svg",
-  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

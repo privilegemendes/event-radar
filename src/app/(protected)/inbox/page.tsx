@@ -15,7 +15,6 @@ interface Event {
   location: string | null;
   isOnline: boolean;
   region: string | null;
-  coderRelevant: boolean;
   sourceNote: string | null;
   partner: { name: string; region: string | null } | null;
   industry: string | null;
@@ -293,9 +292,6 @@ export default function InboxPage() {
                       <span className={`font-mono text-[9px] uppercase tracking-[0.06em] px-1.5 py-0.5 rounded font-bold ${scoreColor(ev.relevancyScore)}`} title={ev.relevancyRationale ?? ""}>
                         {ev.relevancyScore}/100
                       </span>
-                    )}
-                    {ev.coderRelevant && (
-                      <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">Coder</span>
                     )}
                     {ev.region && <span className="font-mono text-[9px] text-white/30">{ev.region}</span>}
                   </div>

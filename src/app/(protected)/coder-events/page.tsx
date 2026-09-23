@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import EventAvatar from "@/components/EventAvatar";
 import { EVENT_TYPE_STYLES, ACTION_STYLES, ACTION_LABELS } from "@/lib/constants";
 
-interface CoderEvent {
+interface CompanyEvent {
   id: string;
   title: string;
   type: string;
@@ -29,7 +29,7 @@ function fmtDate(d: string | null, opts?: Intl.DateTimeFormatOptions) {
   return new Date(d).toLocaleDateString("en-GB", opts ?? { day: "numeric", month: "short", year: "numeric" });
 }
 
-function dateRange(ev: CoderEvent): string {
+function dateRange(ev: CompanyEvent): string {
   if (!ev.startDate) return "Date TBD";
   const s = fmtDate(ev.startDate, { weekday: "short", day: "numeric", month: "short" });
   if (!ev.endDate || ev.endDate === ev.startDate) return s ?? "";
@@ -41,13 +41,13 @@ function dateRange(ev: CoderEvent): string {
   return `${s} – ${e}`;
 }
 
-function monthKey(ev: CoderEvent): string {
+function monthKey(ev: CompanyEvent): string {
   if (!ev.startDate) return "Date TBD";
   return new Date(ev.startDate).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
-function groupByMonth(events: CoderEvent[]): [string, CoderEvent[]][] {
-  const map = new Map<string, CoderEvent[]>();
+function groupByMonth(events: CompanyEvent[]): [string, CompanyEvent[]][] {
+  const map = new Map<string, CompanyEvent[]>();
   for (const ev of events) {
     const k = monthKey(ev);
     if (!map.has(k)) map.set(k, []);
@@ -56,15 +56,15 @@ function groupByMonth(events: CoderEvent[]): [string, CoderEvent[]][] {
   return Array.from(map.entries());
 }
 
-export default function CoderEventsPage() {
+export default function CompanyEventsPage() {
   const router = useRouter();
-  const [events,  setEvents]  = useState<CoderEvent[]>([]);
+  const [events,  setEvents]  = useState<CompanyEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/events?isCoderEvent=true")
       .then((r) => r.json())
-      .then((d: CoderEvent[]) => {
+      .then((d: CompanyEvent[]) => {
         if (!Array.isArray(d)) return;
         // Sort by startDate asc, nulls last
         const sorted = [...d].sort((a, b) => {
@@ -94,9 +94,9 @@ export default function CoderEventsPage() {
         />
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-white">Coder Events</h1>
+            <h1 className="text-xl font-semibold text-white">Company Events</h1>
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/30 mt-1">
-              Official Coder event schedule — awareness &amp; networking
+              Official company event schedule — awareness &amp; networking
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -126,7 +126,7 @@ export default function CoderEventsPage() {
         <div className="flex items-center justify-center h-40 text-white/30 font-mono text-sm">Loading…</div>
       ) : events.length === 0 ? (
         <div className="text-center py-20 text-white/25">
-          <p className="font-mono text-[10px] uppercase tracking-[0.15em]">No Coder events scheduled</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.15em]">No company events scheduled</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -170,9 +170,6 @@ export default function CoderEventsPage() {
                               {ACTION_LABELS[ev.suggestedAction] ?? ev.suggestedAction}
                             </span>
                           )}
-                          <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">
-                            CODER
-                          </span>
                           {ev.region && (
                             <span className={`font-mono text-[9px] ${isEMEA ? "text-coder-purple/60" : "text-white/30"}`}>
                               {ev.region}

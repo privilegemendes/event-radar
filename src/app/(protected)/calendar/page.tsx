@@ -18,7 +18,6 @@ interface Event {
   coderRelevant: boolean;
   partnerId: string | null;
   partner: { id: string; name: string; category: string | null } | null;
-  isCoderEvent: boolean;
 }
 
 const DAYS   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -63,7 +62,6 @@ export default function CalendarPage() {
       if (partnerIdFilter && ev.partnerId !== partnerIdFilter) return false;
     }
     if (partnerMode === "community" && ev.partner) return false;
-    if (partnerMode === "coder" && !ev.isCoderEvent) return false;
     if (partnerMode === "techAlliance" && ev.partner?.category !== "Tech Alliance") return false;
     return true;
   });
@@ -135,7 +133,6 @@ export default function CalendarPage() {
           <option value="">All events</option>
           <option value="partner">Partner events</option>
           <option value="community">Community events</option>
-          <option value="coder">Coder events</option>
           <option value="techAlliance">Tech Alliance events</option>
         </select>
 
@@ -220,7 +217,7 @@ export default function CalendarPage() {
         </div>
         {hasFilter && (
           <span className="font-mono text-[9px] text-coder-purple/60 uppercase tracking-[0.08em]">
-            {partnerMode === "partner" ? (partnerIdFilter ? `Partner: ${partners.find(p => p.id === partnerIdFilter)?.name ?? "…"}` : "Partner events") : partnerMode === "coder" ? "Coder events" : partnerMode === "techAlliance" ? "Tech Alliance events" : "Community events"}
+            {partnerMode === "partner" ? (partnerIdFilter ? `Partner: ${partners.find(p => p.id === partnerIdFilter)?.name ?? "…"}` : "Partner events") : partnerMode === "techAlliance" ? "Tech Alliance events" : "Community events"}
           </span>
         )}
       </div>

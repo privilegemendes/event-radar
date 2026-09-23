@@ -7,7 +7,7 @@ import {
   EVENT_TYPE_STYLES, STATUS_STYLES, LIKELIHOOD_STYLES,
   ACTION_STYLES, ACTION_LABELS, scoreColor,
   EVENT_TYPES, REGIONS, COST_BUCKETS, costBucket,
-  CATEGORIES, CATEGORY_LABELS, CATEGORY_TAGLINES, CATEGORY_RANK_HINTS,
+  VISIBLE_CATEGORIES, CATEGORY_LABELS, CATEGORY_TAGLINES, CATEGORY_RANK_HINTS,
   CATEGORY_STYLES, CATEGORY_ACCENT,
 } from "@/lib/constants";
 import { deriveCategory, categoryRankReason, sortByCategoryRank } from "@/lib/events";
@@ -33,7 +33,6 @@ interface Event {
   isOnline: boolean;
   region: string | null;
   city: string | null;
-  coderRelevant: boolean;
   description: string | null;
   url: string | null;
   partnerId: string | null;
@@ -54,7 +53,6 @@ interface Event {
   attending: boolean;
   readiness: string | null;
   applyUrl: string | null;
-  isCoderEvent: boolean;
 }
 
 function getSortKey(ev: Event): number | null {
@@ -109,7 +107,6 @@ export default function OverviewPage() {
 
   const [typeFilter,      setTypeFilter]      = useState<string[]>([]);
   const [statusFilter,    setStatusFilter]    = useState<string[]>([]);
-  const [coderFilter,     setCoderFilter]     = useState<string[]>([]);
   const [regionFilter,    setRegionFilter]    = useState<string[]>([]);
   const [cityFilter,      setCityFilter]      = useState<string[]>([]);
   const [costFilter,      setCostFilter]      = useState<string[]>([]);
@@ -181,12 +178,6 @@ export default function OverviewPage() {
       if (!inSel(cityFilter, ev.city)) return false;
       if (!inSel(actionFilter, ev.suggestedAction)) return false;
       if (costFilter.length && !costFilter.includes(costBucket(ev))) return false;
-      if (coderFilter.length) {
-        const wantRel = coderFilter.includes("Coder relevant");
-        const wantNot = coderFilter.includes("Not relevant");
-        if (wantRel && !wantNot && !ev.coderRelevant) return false;
-        if (wantNot && !wantRel && ev.coderRelevant) return false;
-      }
       if (searchFilter) {
         const q = searchFilter.toLowerCase();
         if (!ev.title.toLowerCase().includes(q) &&
@@ -198,7 +189,6 @@ export default function OverviewPage() {
         if (partnerIdFilter && ev.partnerId !== partnerIdFilter) return false;
       }
       if (partnerMode === "community" && ev.partner) return false;
-      if (partnerMode === "coder" && !ev.isCoderEvent) return false;
       if (partnerMode === "techAlliance" && ev.partner?.category !== "Tech Alliance") return false;
       return true;
     });
@@ -213,9 +203,9 @@ export default function OverviewPage() {
     ? sortByCategoryRank(filtered.filter((ev) => deriveCategory(ev) === categoryTab))
     : sortEvents(filtered);
 
-  const hasFilters = typeFilter.length || statusFilter.length || coderFilter.length || regionFilter.length || cityFilter.length || costFilter.length || searchFilter || partnerMode || partnerIdFilter || actionFilter.length;
+  const hasFilters = typeFilter.length || statusFilter.length || regionFilter.length || cityFilter.length || costFilter.length || searchFilter || partnerMode || partnerIdFilter || actionFilter.length;
   const clearFilters = () => {
-    setTypeFilter([]); setStatusFilter([]); setCoderFilter([]); setRegionFilter([]); setCityFilter([]); setCostFilter([]);
+    setTypeFilter([]); setStatusFilter([]); setRegionFilter([]); setCityFilter([]); setCostFilter([]);
     setSearchFilter(""); setPartnerMode(""); setPartnerIdFilter(""); setActionFilter([]);
   };
 
@@ -246,7 +236,7 @@ export default function OverviewPage() {
             <span className="font-mono text-[11px] uppercase tracking-[0.08em]">All tracks</span>
             <span className="ml-2 font-mono text-[10px] text-white/30">{filtered.length}</span>
           </button>
-          {CATEGORIES.map((cat) => {
+          {VISIBLE_CATEGORIES.map((cat) => {
             const active = categoryTab === cat;
             const accent = CATEGORY_ACCENT[cat];
             return (
@@ -356,12 +346,10 @@ export default function OverviewPage() {
         <MultiSelect label="All regions" options={REGIONS} selected={regionFilter} onChange={setRegionFilter} />
         <MultiSelect label="All cities" options={[...new Set(allEvents.map((e) => e.city).filter((c): c is string => !!c))].sort()} selected={cityFilter} onChange={setCityFilter} />
         <MultiSelect label="Cost" options={COST_BUCKETS} selected={costFilter} onChange={setCostFilter} />
-        <MultiSelect label="Coder relevance" options={["Coder relevant", "Not relevant"]} selected={coderFilter} onChange={setCoderFilter} />
         <select value={partnerMode} onChange={(e) => handlePartnerMode(e.target.value)} className={selCls}>
           <option value="">All events</option>
           <option value="partner">Partner events</option>
           <option value="community">Community events</option>
-          <option value="coder">Coder events</option>
           <option value="techAlliance">Tech Alliance events</option>
         </select>
         {partnerMode === "partner" && (
@@ -456,12 +444,6 @@ export default function OverviewPage() {
                       )}
                       {lh && LIKELIHOOD_STYLES[lh] && (
                         <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${LIKELIHOOD_STYLES[lh]}`}>{lh}</span>
-                      )}
-                      {ev.coderRelevant && (
-                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">Coder</span>
-                      )}
-                      {ev.isCoderEvent && (
-                        <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/20 text-coder-purple border border-coder-purple/40 font-semibold">CODER EVENT</span>
                       )}
                       {ev.partner?.category === "Tech Alliance" && (
                         <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-amber/15 text-coder-amber border border-coder-amber/30">Tech Alliance</span>

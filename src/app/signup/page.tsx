@@ -4,8 +4,8 @@ import { signUp } from "@/lib/auth-client";
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 
 /**
  * Self-service account creation.
@@ -75,7 +75,7 @@ export default function SignupPage() {
       <div className="relative w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/5 border border-white/10 mb-5">
-            <Image src="/coder-logo.svg" alt="Coder" width={36} height={36} />
+            <Image src="/event-radar-logo-dark-mode.svg" alt="" width={36} height={36} />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Create your account</h1>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/30 mt-2">

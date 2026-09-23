@@ -6,7 +6,7 @@ import { BRAND } from "@/lib/brand";
 export type AvatarSize = 24 | 32 | 40 | 56;
 
 interface EventAvatarProps {
-  event: { title: string; type: string; url?: string | null; isCoderEvent?: boolean | null };
+  event: { title: string; type: string; url?: string | null };
   size?: AvatarSize;
 }
 
@@ -103,39 +103,9 @@ function TypeTile({ type, size }: { type: string; size: AvatarSize }) {
   );
 }
 
-/* ── Coder-branded tile (sponsored events) ── */
-function CoderTile({ size }: { size: AvatarSize }) {
-  const iconSize = Math.round(size * 0.6);
-  return (
-    <div
-      className={`${RADIUS[size]} flex-shrink-0 flex items-center justify-center`}
-      style={{
-        width: size,
-        height: size,
-        background: "linear-gradient(135deg, rgba(188,124,255,0.28) 0%, rgba(188,124,255,0.08) 100%)",
-        border: "1px solid rgba(188,124,255,0.35)",
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/coder-logo.svg"
-        alt="Coder"
-        width={iconSize}
-        height={iconSize}
-        style={{ objectFit: "contain" }}
-      />
-    </div>
-  );
-}
-
 /* ── Main component ── */
 export default function EventAvatar({ event, size = 40 }: EventAvatarProps) {
   const [failed, setFailed] = useState(false);
-
-  // Coder-sponsored events always show the Coder logo, regardless of URL.
-  if (event.isCoderEvent) {
-    return <CoderTile size={size} />;
-  }
 
   const hostname = event.url ? safeHostname(event.url) : null;
   const faviconUrl = hostname
