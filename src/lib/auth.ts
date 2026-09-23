@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { jwt } from "better-auth/plugins";
 import { mcp } from "@better-auth/mcp";
+import { resolveBaseURL, resolveMcpResource } from "./auth-url";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
@@ -16,36 +17,6 @@ import { db } from "./db";
  * Email + password only for now — no social providers. Note this does NOT make
  * the app private: reads are public by design, so the deployment still relies on
  * Vercel Access Protection until that product decision changes.
- */
-/**
- * Where this app is reachable, used for cookies, callbacks and redirects.
- *
- * On Vercel, VERCEL_URL is the *per-deployment* hostname (it changes on every
- * push), so using it in production would pin auth to a URL nobody visits.
- * VERCEL_PROJECT_PRODUCTION_URL is the stable one. Previews legitimately want
- * the per-deployment host. An explicit BETTER_AUTH_URL always wins.
- */
-function resolveBaseURL(): string | undefined {
-  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
-  if (process.env.VERCEL_ENV === "production" && process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  if (process.env.NODE_ENV !== "production") return "http://localhost:3000";
-  return undefined;
-}
-
-/**
- * Origins Better Auth will accept a request from.
- *
- * Better Auth rejects any request whose Origin header does not match the
- * baseURL, with "Invalid origin". This project answers on several hostnames —
- * two named production domains plus Vercel's per-deployment and per-branch
- * aliases — so matching only the baseURL locks sign-in out of all but one.
- *
- * Deliberately NOT a "*.vercel.app" wildcard: that would trust every app on
- * Vercel, which is the whole point of the check. Each host is named, and extra
- * ones can be added through BETTER_AUTH_TRUSTED_ORIGINS without a deploy.
  */
 function resolveTrustedOrigins(): string[] {
   const origins = new Set<string>();
@@ -69,20 +40,6 @@ function resolveTrustedOrigins(): string[] {
   if (process.env.NODE_ENV !== "production") origins.add("http://localhost:3000");
 
   return [...origins];
-}
-
-/**
- * The canonical protected-resource identifier for the MCP server (RFC 8707 /
- * RFC 9728). Tokens are audience-bound to it and it is published in the
- * protected resource metadata, so it must be the URL a client actually calls.
- *
- * Must be HTTPS, except on loopback for local development — which is exactly
- * what resolveBaseURL() already returns, so this follows it rather than being
- * configured separately and drifting.
- */
-function resolveMcpResource(): string {
-  const base = resolveBaseURL() ?? "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}/api/mcp`;
 }
 
 export const MCP_RESOURCE = resolveMcpResource();
