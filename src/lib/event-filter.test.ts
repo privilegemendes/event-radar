@@ -4,6 +4,7 @@ import {
   speakerConditions,
   badgeCountWhere,
   upcomingOrUndated,
+  byScoreThenDate,
   NO_ROW_STATUS,
 } from "./event-filter";
 
@@ -133,8 +134,24 @@ describe("upcomingOrUndated", () => {
     expect(upcomingOrUndated(NOW).OR).toContainEqual({ startDate: null });
   });
 
-  it("keeps events from now onward", () => {
-    expect(upcomingOrUndated(NOW).OR).toContainEqual({ startDate: { gte: NOW } });
+  it("keeps events from the START OF TODAY onward, not from this instant", () => {
+    // startDate is a date stored at 00:00. Comparing against the current time
+    // makes everything happening today read as past — scoring (which floors to
+    // midnight) judged them and the list then hid them.
+    const midnight = new Date("2026-09-22T00:00:00.000Z");
+    const cond = upcomingOrUndated(new Date("2026-09-22T12:00:00Z")).OR as Record<string, unknown>[];
+    const gte = (cond[1].startDate as { gte: Date }).gte;
+    expect(gte.getHours()).toBe(0);
+    expect(gte.getMinutes()).toBe(0);
+    expect(gte.getTime()).toBeLessThanOrEqual(new Date("2026-09-22T12:00:00Z").getTime());
+    expect(midnight).toBeInstanceOf(Date);
+  });
+
+  it("includes an event dated today", () => {
+    const today = new Date("2026-09-22T00:00:00");
+    const cond = upcomingOrUndated(new Date("2026-09-22T18:30:00")).OR as Record<string, unknown>[];
+    const gte = (cond[1].startDate as { gte: Date }).gte;
+    expect(today.getTime()).toBeGreaterThanOrEqual(gte.getTime());
   });
 });
 
@@ -183,7 +200,68 @@ describe("badgeCountWhere", () => {
 
   it("builds the inbox count from exactly the page's conditions", () => {
     expect(badgeCountWhere(ME, "inbox", NOW)).toEqual({
-      AND: speakerConditions(ME, { status: "DISCOVERED" }),
+      AND: [...speakerConditions(ME, { status: "DISCOVERED" }), upcomingOrUndated(NOW)],
     });
+  });
+
+  it("gives the inbox badge the date window too", () => {
+    // The page stopped showing past events; a count that still included them
+    // would re-open the very gap this function closed.
+    expect((badgeCountWhere(ME, "inbox", NOW).AND as unknown[])).toContainEqual(upcomingOrUndated(NOW));
+  });
+});
+
+describe("byScoreThenDate", () => {
+  const d = (s: string) => new Date(s);
+
+  it("puts the highest score first", () => {
+    const out = [{ relevancyScore: 40 }, { relevancyScore: 92 }, { relevancyScore: 65 }].sort(byScoreThenDate);
+    expect(out.map((r) => r.relevancyScore)).toEqual([92, 65, 40]);
+  });
+
+  it("puts every unscored row after every scored one", () => {
+    // Not treated as zero: a backlog is mostly unjudged (1218 of 1321 for the
+    // first real profile), and interleaving by date would bury the scored ones.
+    const out = [
+      { relevancyScore: null, startDate: d("2026-01-01") },
+      { relevancyScore: 12, startDate: d("2027-01-01") },
+    ].sort(byScoreThenDate);
+    expect(out[0].relevancyScore).toBe(12);
+  });
+
+  it("breaks ties on the soonest date", () => {
+    const out = [
+      { relevancyScore: 80, startDate: d("2026-12-01") },
+      { relevancyScore: 80, startDate: d("2026-10-01") },
+    ].sort(byScoreThenDate);
+    expect(out[0].startDate).toEqual(d("2026-10-01"));
+  });
+
+  it("orders unscored rows among themselves by date", () => {
+    const out = [
+      { relevancyScore: null, startDate: d("2027-05-01") },
+      { relevancyScore: null, startDate: d("2026-05-01") },
+    ].sort(byScoreThenDate);
+    expect(out[0].startDate).toEqual(d("2026-05-01"));
+  });
+
+  it("sorts undated rows after dated ones at the same score", () => {
+    const out = [
+      { relevancyScore: null, startDate: null },
+      { relevancyScore: null, startDate: d("2030-01-01") },
+    ].sort(byScoreThenDate);
+    expect(out[0].startDate).toEqual(d("2030-01-01"));
+  });
+
+  it("accepts ISO strings as well as Dates, since JSON carries strings", () => {
+    const out = [
+      { relevancyScore: 50, startDate: "2026-12-01T00:00:00Z" },
+      { relevancyScore: 50, startDate: "2026-10-01T00:00:00Z" },
+    ].sort(byScoreThenDate);
+    expect(out[0].startDate).toBe("2026-10-01T00:00:00Z");
+  });
+
+  it("does not throw on an unparseable date", () => {
+    expect(() => [{ relevancyScore: 1, startDate: "nonsense" }, { relevancyScore: 1 }].sort(byScoreThenDate)).not.toThrow();
   });
 });

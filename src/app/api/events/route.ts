@@ -4,7 +4,7 @@ import { requireSession, requireAdmin, authErrorResponse } from "@/lib/session";
 import { EventStatus, EventType, Prisma } from "@prisma/client";
 import { serializeAudienceSignals } from "@/lib/events";
 import { mergeEventWithOpportunity, OPPORTUNITY_WIRE_FIELDS } from "@/lib/opportunity";
-import { speakerConditions, upcomingOrUndated } from "@/lib/event-filter";
+import { speakerConditions, upcomingOrUndated, byScoreThenDate } from "@/lib/event-filter";
 
 /**
  * Named data contracts for the list endpoint. This route returns every matching
@@ -81,6 +81,13 @@ export async function GET(request: NextRequest) {
        src/lib/event-filter.ts. */
     const and: unknown[] = speakerConditions(session.userId, { status, category, coderRelevant, view });
 
+    /* The inbox is a triage queue: an event that has already happened cannot be
+       applied to or attended, and scoring skips those for exactly that reason.
+       Showing them put 103 dead rows in front of everything actionable. */
+    if (view === "inbox") {
+      and.push(upcomingOrUndated());
+    }
+
     if (view === "podium") {
       // The date half is a fact about the event, so it is not routed through an
       // opportunity — but it is shared with the sidebar's badge count, which
@@ -131,12 +138,18 @@ export async function GET(request: NextRequest) {
           orderBy,
         });
 
-    return NextResponse.json(
-      rows.map((e) => mergeEventWithOpportunity(
-        e as Record<string, unknown>,
-        (e as { opportunities?: unknown[] }).opportunities?.[0] as never,
-      )),
-    );
+    const merged = rows.map((e) => mergeEventWithOpportunity(
+      e as Record<string, unknown>,
+      (e as { opportunities?: unknown[] }).opportunities?.[0] as never,
+    ));
+
+    /* The inbox ranks by this speaker's own score; every other view keeps the
+       chronological orderBy above, which is what a calendar, a map and a podium
+       all want. Sorted here rather than in the query because the score lives on
+       the opportunity — see byScoreThenDate. */
+    if (view === "inbox") merged.sort(byScoreThenDate as (a: unknown, b: unknown) => number);
+
+    return NextResponse.json(merged);
   } catch (err) {
     const authed = authErrorResponse(err);
     if (authed) return authed;
