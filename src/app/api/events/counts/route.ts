@@ -25,8 +25,8 @@ export async function GET() {
       db.event.count({ where: badgeCountWhere(session.userId, "podium") }),
     ]);
 
-    /* Coder Events stays an Event-level count: it is a property of the event
-       (on Coder's schedule, in EMEA), not of anyone's opinion of it. */
+    /* Company events stay an Event-level count: it is a property of the event
+       (on the company schedule, in EMEA), not of anyone's opinion of it. */
     const coderEvents = await db.event.count({
       where: { isCoderEvent: true, region: { in: ["Europe", "UK"] } },
     });

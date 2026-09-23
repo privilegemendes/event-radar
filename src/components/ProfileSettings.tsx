@@ -24,7 +24,7 @@ const TEXT_FIELDS: { key: keyof ApplicantProfile; label: string; ph?: string; fu
   { key: "fullName", label: "Full name", ph: "Ada Lovelace" },
   { key: "pronouns", label: "Pronouns", ph: "she/her" },
   { key: "jobTitle", label: "Job title", ph: "EMEA Partner Manager" },
-  { key: "company", label: "Company", ph: "Coder" },
+  { key: "company", label: "Company", ph: "Acme Inc." },
   { key: "email", label: "Email", ph: "you@example.com" },
   { key: "phone", label: "Phone", ph: "+31 …" },
   { key: "location", label: "Location", ph: "Amsterdam, NL" },

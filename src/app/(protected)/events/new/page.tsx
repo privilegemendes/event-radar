@@ -3,7 +3,7 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { EVENT_TYPES, EVENT_STATUSES, REGIONS, CATEGORIES, CATEGORY_LABELS, AUDIENCE_SIGNALS, AUDIENCE_LABELS } from "@/lib/constants";
+import { EVENT_TYPES, EVENT_STATUSES, REGIONS, VISIBLE_CATEGORIES, CATEGORY_LABELS, AUDIENCE_SIGNALS, AUDIENCE_LABELS } from "@/lib/constants";
 
 interface Partner { id: string; name: string; }
 
@@ -92,7 +92,7 @@ export default function NewEventPage() {
           <F label="Track">
             <select className={inputCls} value={form.category} onChange={(e) => set("category", e.target.value)}>
               <option value="">Auto (from signals)</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
+              {VISIBLE_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
             </select>
           </F>
           <F label="Status">{S("status", EVENT_STATUSES)}</F>
@@ -113,7 +113,7 @@ export default function NewEventPage() {
           <F label="Source Note">{I("sourceNote", { placeholder: "How was this discovered?" })}</F>
 
           <div className="flex gap-5 items-center pt-2">
-            {[{ key: "isOnline", label: "Online" }, { key: "coderRelevant", label: "Coder Relevant" }].map(({ key, label }) => (
+            {[{ key: "isOnline", label: "Online" }].map(({ key, label }) => (
               <label key={key} className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"

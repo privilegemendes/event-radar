@@ -1,5 +1,5 @@
 /**
- * Coder brand colors for runtime use (SVG `fill`/`stroke`, inline styles,
+ * Brand colors for runtime use (SVG `fill`/`stroke`, inline styles,
  * color lookup maps).
  *
  * For anything expressible as a class name, use the Tailwind utilities instead

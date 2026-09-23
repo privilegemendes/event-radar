@@ -7,7 +7,7 @@ import {
   EVENT_TYPE_STYLES, STATUS_STYLES, STATUS_ORDER,
   EVENT_TYPES, EVENT_STATUSES, REGIONS, LIKELIHOOD_STYLES,
   ACTION_STYLES, ACTION_LABELS, scoreColor,
-  CATEGORIES, CATEGORY_LABELS, CATEGORY_STYLES,
+  VISIBLE_CATEGORIES, CATEGORY_LABELS, CATEGORY_STYLES,
   AUDIENCE_SIGNALS, AUDIENCE_LABELS,
 } from "@/lib/constants";
 import { deriveCategory } from "@/lib/events";
@@ -279,8 +279,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               {rs != null && (
                 <span className={`font-mono text-[9px] font-bold px-1.5 py-0.5 rounded ${scoreColor(rs)}`} title={event.relevancyRationale ?? ""}>{rs}/100</span>
               )}
-              {event.coderRelevant && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/15 text-coder-purple border border-coder-purple/30">Coder</span>}
-            {event.isCoderEvent && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-purple/20 text-coder-purple border border-coder-purple/40 font-semibold">CODER EVENT</span>}
             {event.partner?.category === "Tech Alliance" && <span className="font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-coder-amber/15 text-coder-amber border border-coder-amber/30">Tech Alliance</span>}
               {lh && LIKELIHOOD_STYLES[lh] && <span className={`font-mono text-[9px] uppercase tracking-[0.08em] px-1.5 py-0.5 rounded ${LIKELIHOOD_STYLES[lh]}`}>{lh} likelihood</span>}
             </div>
@@ -578,7 +576,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   </select>
                 </div>
                 <div className="flex gap-5 items-center pt-1 md:col-span-2">
-                  {[{ key: "isOnline", label: "Online" }, { key: "coderRelevant", label: "Coder Relevant" }].map(({ key, label }) => (
+                  {[{ key: "isOnline", label: "Online" }].map(({ key, label }) => (
                     <label key={key} className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={(form[key as keyof Event] as boolean) ?? false} onChange={(e) => set(key as keyof Event, e.target.checked)} className="w-4 h-4 rounded accent-coder-purple" />
                       <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">{label}</span>
@@ -612,7 +610,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <label className={labelCls}>Track</label>
                   <select className={inputCls} value={form.category ?? ""} onChange={(e) => set("category", e.target.value || null)}>
                     <option value="">Auto ({CATEGORY_LABELS[deriveCategory(event)]})</option>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
+                    {VISIBLE_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
                   </select>
                 </div>
                 <div>

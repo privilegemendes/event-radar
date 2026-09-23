@@ -144,7 +144,7 @@ export default function PartnersPage() {
         <div>
           <h1 className="text-xl font-semibold text-white">Partners</h1>
           <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/30 mt-1">
-            Coder Global Partner Ecosystem
+            Global Partner Ecosystem
           </p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">

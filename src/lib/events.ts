@@ -222,7 +222,7 @@ export function categoryRank(ev: EventLike): number {
   }
 
   if (cat === "PARTICIPATE") {
-    // Strategic value: where Coder's customers / partners are.
+    // Strategic value: where the company's customers / partners are.
     let score = rel * 0.5;
     if (ev.partnerId || ev.partner) score += 25;
     if (ev.coderRelevant) score += 15;
@@ -252,8 +252,8 @@ export function categoryRankReason(ev: EventLike): string {
     if (ev.partner) parts.push(`Partner: ${ev.partner.name}`);
     if (hasSignal(ev, "CUSTOMERS")) parts.push("Customers present");
     if (hasSignal(ev, "PARTNERS")) parts.push("Partners present");
-    if (ev.isCoderEvent) parts.push("On Coder schedule");
-    return parts.join(" · ") || "Strategic for Coder";
+    if (ev.isCoderEvent) parts.push("On the company schedule");
+    return parts.join(" · ") || "Strategically relevant";
   }
   return ev.relevancyScore != null ? `Relevance ${ev.relevancyScore}/100` : "Personal interest";
 }

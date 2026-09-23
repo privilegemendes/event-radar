@@ -1,4 +1,4 @@
-/* ── Event type badge styles — Coder brand palette ── */
+/* ── Event type badge styles — brand palette ── */
 export const EVENT_TYPE_STYLES: Record<string, string> = {
   CONFERENCE: "bg-coder-purple/15 text-coder-purple border border-coder-purple/30",
   MEETUP:     "bg-coder-green/15 text-coder-green border border-coder-green/30",
@@ -108,6 +108,10 @@ export const REGION_STYLES: Record<string, string> = {
 export const CATEGORIES = ["ATTEND", "PARTICIPATE", "SPEAK"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
+/* Tracks offered in the UI. PARTICIPATE is company-facing — events still carry
+   it, and analysis still assigns it, but it is not selectable or filterable. */
+export const VISIBLE_CATEGORIES: readonly Category[] = ["ATTEND", "SPEAK"];
+
 export const CATEGORY_LABELS: Record<string, string> = {
   ATTEND:      "Attend",
   PARTICIPATE: "Participate",
@@ -117,7 +121,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
 /* Short helper text shown under each track heading */
 export const CATEGORY_TAGLINES: Record<string, string> = {
   ATTEND:      "Events I’d go to individually",
-  PARTICIPATE: "Coder sponsors or attends as a company",
+  PARTICIPATE: "Events attended or sponsored as a company",
   SPEAK:       "Speaking opportunities for me",
 };
 
