@@ -7,6 +7,10 @@ import { scoreForSpeaker, selectUnscoredEvents, buildScoringBrief, applyScores, 
 import { renderEventFacts, LIKELIHOODS, ACTIONS, CATEGORIES } from "@/lib/scoring-parse";
 import { buildPitchPrompt, savePitchDraft } from "@/lib/pitch";
 import { buildSummaryBrief, saveSummary } from "@/lib/executive-summary";
+import { ingestDiscoveredEvents, rotatingFocus, type DiscoveredEvent } from "@/lib/discovery";
+import { buildCatalogueScope, buildSearchPlan } from "@/lib/speaker-brief";
+import { profileFromRow } from "@/lib/profile-schema";
+import { mergeProfilesForCatalogue } from "@/lib/speaker-brief";
 import { MAX_LIMIT } from "@/lib/pagination";
 
 /**
@@ -86,7 +90,13 @@ interface Registrable {
   ): unknown;
 }
 
-export function registerEventRadarTools(server: Registrable, userId: string) {
+/**
+ * @param isAdmin whether to register the tools that write the shared
+ *   catalogue. The caller resolves it; these tools are simply NOT REGISTERED
+ *   for a member, so they are absent from tools/list rather than present and
+ *   refusing — a tool a caller cannot use should not be advertised to it.
+ */
+export function registerEventRadarTools(server: Registrable, userId: string, isAdmin = false) {
   server.registerTool(
     "search_events",
     {
@@ -443,6 +453,92 @@ export function registerEventRadarTools(server: Registrable, userId: string) {
       return json({ saved: true, generatedAt, length: summary.length });
     },
   );
+
+  /* ── Shared catalogue: ADMIN ONLY ────────────────────────────────────────
+   * Registered only when the caller is an admin, so a member never sees these
+   * in tools/list rather than seeing them and being refused.
+   *
+   * Everything above writes the caller's OWN rows. These write the catalogue
+   * everyone reads, which is a different trust question — which is why the
+   * validation, dedup and geo normalisation all live server-side in
+   * ingestDiscoveredEvents and cannot be bypassed by sending different JSON.
+   *
+   * The weekly cron still runs discovery server-side: nobody is in a
+   * conversation at 09:00 on a Monday. This is the interactive counterpart,
+   * not a replacement.
+   */
+  if (isAdmin) {
+    server.registerTool(
+      "get_discovery_brief",
+      {
+        title: "Get the brief for finding new events (admin)",
+        description:
+          "What the catalogue is looking for — topics, places and a rotating focus, merged across " +
+          "ALL speaker profiles rather than one person's. Search the web yourself against this, " +
+          "then send candidates to submit_discovered_events. Finding is shared work: the events " +
+          "land in everyone's inbox unscored, and each speaker scores them for themselves.",
+        inputSchema: {},
+      },
+      async () => {
+        const rows = await db.speakerProfile.findMany();
+        const merged = mergeProfilesForCatalogue(rows.map((r) => profileFromRow(r as unknown as Record<string, unknown>)));
+        const focus = await rotatingFocus();
+        return json({
+          focus,
+          scope: buildCatalogueScope(merged),
+          searchPlan: buildSearchPlan(merged, new Date().getFullYear()),
+          next:
+            "Search the web for events matching `scope` and `focus`, then call " +
+            "submit_discovered_events. Do NOT score them — scoring is per speaker and happens separately.",
+        });
+      },
+    );
+
+    server.registerTool(
+      "submit_discovered_events",
+      {
+        title: "Add discovered events to the catalogue (admin)",
+        description:
+          "Add events you found to the SHARED catalogue. The server dedupes against every existing " +
+          "title and URL, drops unknown types and events already past, normalises the region, and " +
+          "creates one unscored opportunity per speaker — so send what you found and let it filter. " +
+          "Report `inserted` versus `considered`: a low ratio usually means they were already there.",
+        inputSchema: {
+          events: z.array(z.object({
+            title: z.string().min(1),
+            type: z.enum(["CONFERENCE", "MEETUP", "EVENT", "PODCAST", "WEBINAR"]),
+            startDate: z.string().optional().describe("ISO date"),
+            location: z.string().optional(),
+            isOnline: z.boolean().optional(),
+            region: z.string().optional().describe("Plain words, e.g. \"Netherlands\" — normalised server-side"),
+            url: z.string().optional(),
+            cfpDeadline: z.string().optional().describe("ISO date"),
+            description: z.string().optional(),
+            industry: z.string().optional(),
+            audienceDescription: z.string().optional(),
+            audienceSize: z.number().optional(),
+            otherSpeakers: z.string().optional(),
+            ticketCost: z.string().optional(),
+            howToApply: z.string().optional(),
+            applyUrl: z.string().optional(),
+            attendUrl: z.string().optional(),
+          })).min(1),
+          note: z.string().optional().describe("Provenance, e.g. what you searched for"),
+        },
+      },
+      async (a: Record<string, never>) => {
+        const { events, note } = a as unknown as { events: DiscoveredEvent[]; note?: string };
+        const sourceNote = `Discovered via MCP${note ? `: ${note}` : ""} — ${new Date().toDateString()}`;
+        const outcome = await ingestDiscoveredEvents(events, { sourceNote });
+        return json({
+          ...outcome,
+          note: outcome.inserted < outcome.considered
+            ? `${outcome.considered - outcome.inserted} were skipped — already in the catalogue, already past, or an unknown type.`
+            : undefined,
+        });
+      },
+    );
+  }
 
   server.registerTool(
     "apply_to_event",
