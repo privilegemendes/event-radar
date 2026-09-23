@@ -25,6 +25,21 @@ export default function LoginPage() {
         // keep the existing wording so the copy does not leak which was wrong.
         setError(error.message ?? "Invalid credentials");
       } else {
+        /* An OAuth authorization in progress lands here carrying its own signed
+           query (client_id, redirect_uri, code_challenge, sig…). Sending those
+           back to /oauth2/authorize is what resumes the flow and returns the
+           person to the client that sent them; pushing "/" instead would sign
+           them in and strand them on the dashboard, which is how a connector
+           appears to hang. */
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("client_id")) {
+          /* A hard navigation, deliberately. The target is an API route that
+             answers with a 302 to the client's redirect_uri; router.push()
+             would try to client-side route to it and never leave the app. */
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.href = `/api/auth/oauth2/authorize?${params.toString()}`;
+          return;
+        }
         router.push("/");
         router.refresh();
       }

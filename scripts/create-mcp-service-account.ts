@@ -1,13 +1,10 @@
 /**
- * Create (or reset) the MCP service account.
+ * Create (or reset) the test account used by mcp/oauth-e2e.mjs.
  *
- * The MCP server authenticates as a real user rather than through a bespoke
- * token: every read and write in this app is scoped to a speaker's own
- * EventOpportunity rows, and `POST /api/events/score` deliberately takes no
- * userId ("scoring someone else's inbox is not an operation this app has, not
- * even for an admin"). A service account is therefore the only identity shape
- * the app actually supports — a token mapped onto someone else's user would be
- * impersonation dressed up as configuration.
+ * NOT how the MCP server authenticates. Real clients get a token through the
+ * OAuth flow, as the person who approved the consent screen — see
+ * src/app/api/mcp/route.ts. This account exists only so the end-to-end test can
+ * stand in for the browser login leg without a human typing a password.
  *
  * Created as MEMBER, not ADMIN. A member can read and run its own scoring but
  * cannot run discovery (which spends money on web search) or edit the shared
