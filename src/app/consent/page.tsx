@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { consentRedirect, type ConsentResult } from "@/lib/consent-redirect";
 
 /**
  * OAuth consent screen.
@@ -65,14 +66,18 @@ function ConsentInner() {
         credentials: "include",
         body: JSON.stringify({ accept, oauth_query: query }),
       });
-      const data = (await res.json().catch(() => null)) as { redirectURI?: string; redirect_uri?: string } | null;
-      const back = data?.redirectURI ?? data?.redirect_uri;
+      const data = (await res.json().catch(() => null)) as ConsentResult | null;
+
+      const back = consentRedirect(data);
       if (back) {
         window.location.assign(back);
         return;
       }
       if (!res.ok) throw new Error(`The server rejected that (${res.status})`);
-      setError("Approved, but the server did not say where to return to.");
+      setError(
+        "Approved, but the server did not say where to return to. " +
+          "Start the connection again from the app that sent you.",
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
