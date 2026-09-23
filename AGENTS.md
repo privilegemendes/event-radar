@@ -16,9 +16,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Vercel deploy state (verified 2026-09-21):** Access Protection is **enabled**
   (`ssoProtection`, production + all previews) — the app has no read-side login of
   its own, so do not disable it without an equivalent gate. The datasource is
-  already hosted **Postgres** on Neon, not SQLite. Still open: the project is on a
-  **personal** GitHub repo and Vercel team, while the README's SMART AI Guidelines
-  say to use the **coder-internal** org for both. See the **Deployment (Vercel)**
+  already hosted **Postgres** on Neon, not SQLite. The GitHub repo and Vercel
+  project moved from a freelancer's personal accounts to `irmakcoderai` on
+  2026-09-23; the README's SMART AI Guidelines name the **coder-internal** org
+  for both, which is still not where this lives. See the **Deployment (Vercel)**
   section in `README.md`.
 - **Auth is Better Auth**, not the old jose JWTs. `src/lib/session.ts` keeps the
   same `getSession` / `requireSession` / `requireAdmin` / `authErrorResponse` API
@@ -35,19 +36,29 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   constant — add a profile field instead. The builders are pure and unit-tested
   (`npm test`); `src/lib/profile-schema.ts` is deliberately free of
   `server-only` so the settings form and the tests can import it.
-- **Commit as the account that owns the Vercel project** — currently
-  `Privilege Mendes <20317699+privilegemendes@users.noreply.github.com>`.
+- **Commit as an account authorized on the Vercel team** that owns this
+  project — since the 2026-09-23 handover that is `irmakcoderai`
+  (`275117545+irmakcoderai@users.noreply.github.com`, if GitHub's id-prefixed
+  noreply is in use; confirm with `git log -1 --format='%ae'` on your own first
+  commit rather than trusting this line).
+
   This is load-bearing, not cosmetic: Vercel blocks a Git-triggered deployment
   whose **commit author** is not authorized on the team, and the deployment
   never builds — it goes straight to `BLOCKED` with no build logs, surfacing on
   the PR only as the generic "Deployment was blocked".
 
-  This file previously said to commit as `Irmak Eyiceoglu <irmak@coder.com>`,
-  which silently blocked every Git deployment while CLI deploys (no commit
-  author) kept working. Verified by deploying identical content twice on one
-  branch: authored by Irmak → `BLOCKED`, authored by the project owner →
-  `READY`. Note Vercel keys on the **author**, not the committer — a commit
-  authored by Irmak but committed via the GitHub UI was still blocked.
+  **Treat the name above as stale the moment ownership moves again.** The rule
+  is "whoever owns the Vercel team", not any particular person; this entry has
+  now been wrong twice, and each time the symptom was deployments that stopped
+  without an error anyone could read.
+
+  History, because the failure is invisible and worth recognising: this file
+  once said to commit as `Irmak Eyiceoglu <irmak@coder.com>`, which silently
+  blocked every Git deployment while CLI deploys (no commit author) kept
+  working. Verified by deploying identical content twice on one branch —
+  authored by Irmak → `BLOCKED`, authored by the project owner → `READY`.
+  Vercel keys on the **author**, not the committer: a commit authored by Irmak
+  but committed through the GitHub UI was still blocked.
 
   Check with `git log -1 --format='%an <%ae>'` before pushing; the fix is
   `git config user.email` plus
