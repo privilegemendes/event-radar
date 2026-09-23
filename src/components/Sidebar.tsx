@@ -37,6 +37,13 @@ const IconInbox = () => (
     <path d="M3 10L5 2h6l2 8"/>
   </svg>
 );
+const IconEvents = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="7" cy="7" r="4.5"/>
+    <path d="M10.5 10.5L14.5 14.5"/>
+  </svg>
+);
+
 const IconProfile = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <circle cx="8" cy="5.5" r="2.75"/>
@@ -73,6 +80,7 @@ const IconSummary = () => (
 
 const NAV_ITEMS = [
   { href: "/",          label: "Overview",  Icon: IconOverview  },
+  { href: "/events",        label: "Events",        Icon: IconEvents       },
   { href: "/speakers",      label: "Speakers & Thought Leaders",     Icon: IconSpeakers     },
   { href: "/podiums",    label: "Podium", Icon: IconGigs      },
   { href: "/calendar",  label: "Calendar",  Icon: IconCalendar  },
