@@ -64,10 +64,6 @@ model User {
   oauthRefreshTokens OauthRefreshToken[]
   oauthAccessTokens  OauthAccessToken[]
   oauthConsents      OauthConsent[]
-  oauthclients       OauthClient[]
-  oauthrefreshtokens OauthRefreshToken[]
-  oauthaccesstokens  OauthAccessToken[]
-  oauthconsents      OauthConsent[]
 }
 
 model Partner {
@@ -192,9 +188,6 @@ model Session {
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   oauthRefreshTokens OauthRefreshToken[]
   oauthAccessTokens  OauthAccessToken[]
-
-  oauthrefreshtokens OauthRefreshToken[]
-  oauthaccesstokens  OauthAccessToken[]
 
   @@unique([token])
   @@index([userId])
@@ -392,11 +385,6 @@ model OauthClient {
   oauthAccessTokens                OauthAccessToken[]
   oauthConsents                    OauthConsent[]
 
-  oauthclientresources OauthClientResource[]
-  oauthrefreshtokens   OauthRefreshToken[]
-  oauthaccesstokens    OauthAccessToken[]
-  oauthconsents        OauthConsent[]
-
   @@map("oauth_client")
   @@index([userId])
 }
@@ -418,8 +406,6 @@ model OauthResource {
   policyVersion                 Int?
   metadata                      Json?
   oauthClientResources          OauthClientResource[]
-
-  oauthclientresources OauthClientResource[]
 
   @@map("oauth_resource")
 }
@@ -461,8 +447,6 @@ model OauthRefreshToken {
   sessionRel              Session?           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   userRel                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   oauthAccessTokens       OauthAccessToken[]
-
-  oauthaccesstokens OauthAccessToken[]
 
   @@map("oauth_refresh_token")
   @@index([clientId])
