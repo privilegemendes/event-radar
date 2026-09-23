@@ -6,6 +6,7 @@ import {
   upcomingOrUndated,
   byScoreThenDate,
   NO_ROW_STATUS,
+  rankThenPage,
 } from "./event-filter";
 
 const ME = "user_me";
@@ -263,5 +264,41 @@ describe("byScoreThenDate", () => {
 
   it("does not throw on an unparseable date", () => {
     expect(() => [{ relevancyScore: 1, startDate: "nonsense" }, { relevancyScore: 1 }].sort(byScoreThenDate)).not.toThrow();
+  });
+});
+
+describe("rankThenPage", () => {
+  /* Guards the ordering that is easy to get backwards: slicing before ranking
+     returns "the best of the first N" instead of "the best N". The score lives
+     on the opportunity, so it cannot be an ORDER BY. */
+  const row = (id: string, relevancyScore: number | null, startDate: string) =>
+    ({ id, relevancyScore, startDate: new Date(startDate) });
+
+  const rows = [
+    row("earliest-unscored", null, "2026-01-01"),
+    row("early-low", 10, "2026-02-01"),
+    row("late-best", 99, "2027-01-01"),
+    row("mid-good", 80, "2026-06-01"),
+  ];
+
+  it("returns the highest-scoring rows, not the earliest ones", () => {
+    const page = rankThenPage(rows as never[], 0, 2).map((r) => (r as { id: string }).id);
+    expect(page).toEqual(["late-best", "mid-good"]);
+  });
+
+  it("pages through the RANKED order", () => {
+    const page = rankThenPage(rows as never[], 2, 2).map((r) => (r as { id: string }).id);
+    expect(page).toEqual(["early-low", "earliest-unscored"]);
+  });
+
+  it("puts unscored rows last, in date order", () => {
+    const unscored = [row("b", null, "2026-05-01"), row("a", null, "2026-03-01")];
+    expect(rankThenPage(unscored as never[], 0, 2).map((r) => (r as { id: string }).id)).toEqual(["a", "b"]);
+  });
+
+  it("does not mutate the caller's array", () => {
+    const input = [...rows];
+    rankThenPage(input as never[], 0, 2);
+    expect(input.map((r) => r.id)).toEqual(rows.map((r) => r.id));
   });
 });

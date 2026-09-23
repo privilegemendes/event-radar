@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { speakerConditions, badgeCountWhere } from "@/lib/event-filter";
+import { speakerConditions, badgeCountWhere, upcomingOrUndated, rankThenPage } from "@/lib/event-filter";
 import { mergeEventWithOpportunity } from "@/lib/opportunity";
 import { getApplicantProfile } from "@/lib/settings";
 import { scoreForSpeaker } from "@/lib/scoring";
@@ -89,9 +89,12 @@ export function registerEventRadarTools(server: Registrable, userId: string) {
     {
       title: "Search events",
       description:
-        "Search the Event Radar catalogue. Returns a compact row per event plus the total, " +
-        "so you can page with `offset`. Scoped to you: `status`, `track` and `score` are your " +
-        "own view of each event, not a shared verdict. Call get_event for full detail.",
+        "Search the Event Radar catalogue. Ranked by YOUR score, then date — the same order the " +
+        "inbox page uses — and events that have already happened are excluded unless you pass " +
+        "includePast. Returns a compact row per event plus the total, so you can page with " +
+        "`offset`. Scoped to you: `status`, `track` and `score` are your own view of each event, " +
+        "not a shared verdict. Check `ranking` before presenting results as a ranking. Call " +
+        "get_event for full detail.",
       inputSchema: {
         search: z.string().optional().describe("Free text over title, description and location"),
         status: z.enum(["DISCOVERED", "APPROVED", "REJECTED", "PITCHED", "ACCEPTED", "SPOKEN"]).optional()
@@ -102,12 +105,15 @@ export function registerEventRadarTools(server: Registrable, userId: string) {
         coderEventsOnly: z.boolean().optional(),
         limit: z.number().int().min(1).max(MAX_LIMIT).optional().describe(`Default ${DEFAULT_LIMIT}`),
         offset: z.number().int().min(0).optional(),
+        includePast: z.boolean().optional()
+          .describe("Include events that have already happened. Off by default: a triage queue cannot act on them."),
       },
     },
     async (a: Record<string, never>) => {
       const args = a as unknown as {
         search?: string; status?: string; track?: string; type?: string;
         region?: string; coderEventsOnly?: boolean; limit?: number; offset?: number;
+        includePast?: boolean;
       };
       const take = Math.min(args.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
       const skip = args.offset ?? 0;
@@ -123,25 +129,51 @@ export function registerEventRadarTools(server: Registrable, userId: string) {
           { location: { contains: args.search } },
         ];
       }
-      where.AND = speakerConditions(userId, { status: args.status ?? null, category: args.track ?? null });
 
+      const and: unknown[] = speakerConditions(userId, {
+        status: args.status ?? null,
+        category: args.track ?? null,
+      });
+
+      /* Triage queues exclude the past, the same way the inbox page does. An
+         event that has already happened cannot be applied to or attended, and
+         scoring skips those for the same reason — offering them here put 103
+         dead rows in front of everything actionable. Opt back in with
+         includePast for a historical lookup ("what did I speak at?"). */
+      if (!args.includePast) and.push(upcomingOrUndated());
+      where.AND = and;
+
+      /* Rank by THIS speaker's score, then date — byScoreThenDate, the same
+         comparator the inbox page uses. It sorts unscored rows after scored
+         ones and falls back to date, so an unscored catalogue comes out in
+         date order exactly as before.
+
+         Ranked in JS because the score lives on the opportunity, which means
+         the page has to be taken AFTER the ranking — see rankThenPage, which
+         exists to keep that order from being reversed. Matches the route,
+         which pages the inbox in memory for the same reason. */
       const opportunities = { where: { userId }, take: 1 } as const;
-      const [rows, total] = await Promise.all([
-        db.event.findMany({
-          where, select: { ...EVENT_COLUMNS, opportunities }, take, skip,
-          orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
-        }),
-        db.event.count({ where }),
-      ]);
+      const rows = await db.event.findMany({
+        where,
+        select: { ...EVENT_COLUMNS, opportunities },
+        orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
+      });
 
-      const events = rows.map((e) =>
-        compact(mergeEventWithOpportunity(e as Row, (e as { opportunities?: unknown[] }).opportunities?.[0] as never) as Row),
+      const merged = rows.map((e) =>
+        mergeEventWithOpportunity(e as Row, (e as { opportunities?: unknown[] }).opportunities?.[0] as never) as Row,
       );
+      const total = merged.length;
+      const events = rankThenPage(merged as never[], skip, take).map((e) => compact(e as Row));
+      const scored = merged.filter((e) => e.relevancyScore != null).length;
 
       return json({
         total,
         showing: events.length ? `${skip + 1}-${skip + events.length} of ${total}` : `0 of ${total}`,
         more: skip + events.length < total ? `call again with offset=${skip + events.length}` : null,
+        /* Say so rather than let a caller read an unranked list as a ranking. */
+        ranking: scored === 0
+          ? "date order — none of these are scored yet; run score_my_inbox to rank them"
+          : `score, then date (${scored} of ${total} scored)`,
         events,
       });
     },
