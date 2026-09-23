@@ -18,12 +18,15 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Dark is the only theme wired up today. The token set in globals.css already
+  // carries both, so enabling light mode means making this class conditional —
+  // not another pass over the components.
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full dark`}
     >
-      <body className="h-full bg-coder-bg text-white antialiased">{children}</body>
+      <body className="h-full bg-background text-foreground antialiased">{children}</body>
     </html>
   );
 }
