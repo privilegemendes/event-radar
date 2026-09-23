@@ -103,17 +103,16 @@ npm test
 > database — a schema reset in any of them wipes it for all. Give each worktree
 > its own database if you run more than one.
 
-## Default Logins
+## Seeded accounts
 
-> ⚠️ **All seeded passwords are `change-me-now` — change them on first login.**
+`prisma db seed` creates three accounts — `irmak@coder.com`,
+`assistant@example.com` and `viewer@coder.com` — all with the password written in
+`prisma/seed.ts`, and all flagged to demand a change on first sign-in.
 
-| Email | Role | Notes |
-|-------|------|-------|
-| irmak@coder.com | ADMIN | Primary user, and the `OWNER_EMAIL` default |
-| assistant@example.com | ADMIN | Secondary admin |
-| viewer@coder.com | MEMBER | Non-admin account |
-
-A banner shows until the default password is changed.
+> ⚠️ That password is in a committed file, so a seeded account is public
+> knowledge until it is changed. On any deployment reachable from the internet,
+> change or delete them before the app is shared — an unchanged ADMIN seed is a
+> published admin login.
 
 ## Environment Variables
 
