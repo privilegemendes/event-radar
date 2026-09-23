@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolveAnthropic, messagesUrl } from "@/lib/anthropic";
 import { requireSession, requireAdmin, authErrorResponse, type Session } from "@/lib/session";
 import { getSetting, setSetting } from "@/lib/settings";
 import { deriveCategory } from "@/lib/events";
@@ -9,6 +10,22 @@ import { getApplicantProfile } from "@/lib/settings";
 import { buildSpeakerProfile, speakerName } from "@/lib/speaker-brief";
 
 export const maxDuration = 120;
+
+/**
+ * Where a speaker's generated summary is cached.
+ *
+ * Per user. computeStats has been per-speaker since Phase 2, but the generated
+ * text was written to a single global AppSetting row, so the page showed your
+ * numbers above whoever last pressed Generate — two different people on one
+ * screen with nothing saying so.
+ *
+ * The old un-suffixed "exec_summary" row is left where it is rather than
+ * migrated onto one person: it was written from whichever speaker happened to
+ * generate last, and assigning it to someone would be a guess. Nothing reads it
+ * now, and a summary is regenerated in one click.
+ */
+const summaryKey = (userId: string) => `exec_summary:${userId}`;
+const summaryAtKey = (userId: string) => `exec_summary_at:${userId}`;
 
 type Ev = {
   title: string; region: string | null; city: string | null; type: string; status: string;
@@ -92,8 +109,8 @@ export async function GET() {
   }
 
   const stats = await computeStats(session.userId, isOwner(session));
-  const summary = await getSetting("exec_summary");
-  const generatedAt = await getSetting("exec_summary_at");
+  const summary = await getSetting(summaryKey(session.userId));
+  const generatedAt = await getSetting(summaryAtKey(session.userId));
   return NextResponse.json({ stats, summary, generatedAt });
 }
 
@@ -112,8 +129,8 @@ export async function POST() {
   }
 
   const stats = await computeStats(session.userId, isOwner(session));
-  const baseUrl = process.env.ANTHROPIC_BASE_URL, authToken = process.env.ANTHROPIC_AUTH_TOKEN;
-  if (!baseUrl || !authToken) return NextResponse.json({ error: "LLM not configured" }, { status: 503 });
+  const anthropic = resolveAnthropic(process.env);
+  if (!anthropic) return NextResponse.json({ error: "LLM not configured" }, { status: 503 });
 
   const profile = await getApplicantProfile(session.userId);
   const name = speakerName(profile);
@@ -143,17 +160,17 @@ Write a sharp, decision-useful EXECUTIVE SUMMARY & RECOMMENDATIONS in GitHub-fla
 ## Recommendations & next actions — concrete, prioritized
 Keep it tight (450-700 words). No preamble, start at the first '## ' heading.`;
 
-  const res = await fetch(`${baseUrl}/v1/messages`, {
+  const res = await fetch(messagesUrl(anthropic), {
     method: "POST",
-    headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01", Authorization: `Bearer ${authToken}`, "x-api-key": authToken },
+    headers: anthropic.headers,
     body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 3000, messages: [{ role: "user", content: brief }] }),
   });
   if (!res.ok) return NextResponse.json({ error: `LLM error: ${(await res.text()).slice(0, 200)}` }, { status: 502 });
   const data = await res.json() as { content: Array<{ type: string; text?: string }> };
   const md = data.content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("\n").trim();
 
-  await setSetting("exec_summary", md);
+  await setSetting(summaryKey(session.userId), md);
   const now = new Date().toISOString();
-  await setSetting("exec_summary_at", now);
+  await setSetting(summaryAtKey(session.userId), now);
   return NextResponse.json({ ok: true, summary: md, generatedAt: now, stats });
 }

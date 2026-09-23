@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolveAnthropic, messagesUrl } from "@/lib/anthropic";
 import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { capNote } from "@/lib/text";
 import { getApplicantProfile } from "@/lib/settings";
@@ -20,9 +21,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const speaker = await db.speaker.findUnique({ where: { id } });
     if (!speaker) return NextResponse.json({ error: "Speaker not found" }, { status: 404 });
 
-    const baseUrl = process.env.ANTHROPIC_BASE_URL;
-    const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
-    if (!baseUrl || !authToken)
+    const anthropic = resolveAnthropic(process.env);
+    if (!anthropic)
       return NextResponse.json({ error: "Anthropic credentials not configured" }, { status: 503 });
 
     const events: Array<{ title: string }> = speaker.eventsJson ? JSON.parse(speaker.eventsJson) : [];
@@ -48,14 +48,9 @@ Write ONE personal, CREATIVE LinkedIn connection-request note (STRICTLY under 28
 Reference something genuinely specific about them and make it land — memorable and human. ${toneHint}
 CRITICAL: do NOT ask for anything — no advice, no meeting, no call, no opportunity, no favour, no question. It is simply a genuine personal note that makes them want to accept the connection. First person as ${name}. No emojis, no hashtags, not salesy. Return ONLY the note text, nothing else.`;
 
-    const response = await fetch(`${baseUrl}/v1/messages`, {
+    const response = await fetch(messagesUrl(anthropic), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        Authorization: `Bearer ${authToken}`,
-        "x-api-key": authToken,
-      },
+      headers: anthropic.headers,
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
         max_tokens: 400,

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { profileFromRow } from "@/lib/profile-schema";
-import { buildSpeakerProfile, buildScoringRubric } from "@/lib/speaker-brief";
+import { buildSpeakerProfile, buildScoringRubric, buildGeographyLine } from "@/lib/speaker-brief";
+import { resolveAnthropic, messagesUrl } from "@/lib/anthropic";
 import {
   buildScoringPrompt,
   extractScoreArray,
@@ -84,9 +85,8 @@ export async function scoreForSpeaker(
 
   if (events.length === 0) return { ok: true, scored: 0, considered: 0 };
 
-  const baseUrl = process.env.ANTHROPIC_BASE_URL;
-  const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
-  if (!baseUrl || !authToken) {
+  const anthropic = resolveAnthropic(process.env);
+  if (!anthropic) {
     return { ok: false, scored: 0, considered: events.length, error: "Anthropic credentials not configured", status: 503 };
   }
 
@@ -94,23 +94,20 @@ export async function scoreForSpeaker(
   const profile = profileFromRow(row as unknown as Record<string, unknown> | null);
   const speakerBlock = buildSpeakerProfile(profile, "full");
   const rubricBlock = buildScoringRubric(profile);
+  const geographyLine = buildGeographyLine(profile);
 
   let scored = 0;
 
   for (let offset = 0; offset < events.length; offset += BATCH) {
     const batch = events.slice(offset, offset + BATCH) as ScorableEvent[];
-    const prompt = buildScoringPrompt(speakerBlock, rubricBlock, batch);
+    const prompt = buildScoringPrompt(speakerBlock, rubricBlock, batch, geographyLine);
 
     let text: string;
     try {
-      const response = await fetch(`${baseUrl}/v1/messages`, {
+      const response = await fetch(messagesUrl(anthropic), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "anthropic-version": "2023-06-01",
-          Authorization: `Bearer ${authToken}`,
-          "x-api-key": authToken,
-        },
+        // No `anthropic-beta`, and no `tools` below — see the note at the top.
+        headers: anthropic.headers,
         // No `tools`, deliberately — see the note at the top of this file.
         body: JSON.stringify({
           model: MODEL,

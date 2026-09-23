@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { runDiscovery, rotatingFocus } from "@/lib/discovery";
 import { scoreForAllSpeakers } from "@/lib/scoring";
 import { isAutoDiscoveryEnabled } from "@/lib/settings";
+import { planDiscovery } from "@/lib/cron-plan";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -16,14 +17,21 @@ export const dynamic = "force-dynamic";
  *     `Authorization: Bearer <secret>` (Vercel Cron does this automatically) or
  *     `?key=<secret>`. If CRON_SECRET is not set, the endpoint is open (dev).
  *
- * Safeguards:
- *   • Skips if auto-discovery is toggled off (AppSetting).
- *   • Skips if another run started in the last 10 minutes (no overlap / no spam).
- *   • Rotates the search focus each run so it keeps finding *new* events.
+ * Two independent halves, and the toggle governs only the first:
  *
- * Discovery only catalogues. Scoring runs straight after it, once per speaker,
- * so what lands in an inbox overnight is already judged against that speaker's
- * own brief — see docs/PER_SPEAKER_SPLIT.md.
+ *   DISCOVERY — finds new events. Web search, expensive, shared. Skipped when
+ *     auto-discovery is toggled off, or when another run started in the last 10
+ *     minutes. Rotates its search focus so each pass explores a new slice.
+ *   SCORING — judges the catalogue once per speaker. No web search, cheap, and
+ *     it runs on every invocation regardless of the toggle.
+ *
+ * They used to be one path: the toggle returned early, so turning discovery off
+ * also turned scoring off, and "stop spending on web search but keep judging
+ * what we already have" could not be expressed at all. Scoring has to run
+ * independently — a speaker who has just written their brief has a backlog of
+ * events nobody has judged for them, and none of that needs a new search.
+ *
+ * See docs/PER_SPEAKER_SPLIT.md.
  */
 async function handle(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -34,35 +42,39 @@ async function handle(request: NextRequest) {
     if (!ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!(await isAutoDiscoveryEnabled())) {
-    return NextResponse.json({ skipped: true, reason: "auto-discovery disabled" });
+  /* ── Discovery: optional ── */
+  type DiscoveryReport =
+    | { ran: false; reason: string }
+    | { ran: true; ok: boolean; focus: string; runId: string; found?: number; total?: number; error?: string };
+
+  const plan = planDiscovery({
+    enabled: await isAutoDiscoveryEnabled(),
+    recentRun: await db.discoveryRun.findFirst({ orderBy: { startedAt: "desc" }, select: { status: true, startedAt: true } }),
+  });
+
+  let discovery: DiscoveryReport;
+  if (!plan.run) {
+    discovery = { ran: false, reason: plan.reason };
+  } else {
+    const focus = await rotatingFocus();
+    const result = await runDiscovery({ focus });
+    discovery = { ran: true, ok: result.ok, focus, runId: result.runId, found: result.found, total: result.total, error: result.error };
   }
 
-  // Overlap guard: don't start if a run is fresh/in-flight.
-  const recent = await db.discoveryRun.findFirst({ orderBy: { startedAt: "desc" } });
-  if (recent && recent.status === "RUNNING" && Date.now() - new Date(recent.startedAt).getTime() < 10 * 60 * 1000) {
-    return NextResponse.json({ skipped: true, reason: "a run is already in progress" });
-  }
-
-  const focus = await rotatingFocus();
-  const result = await runDiscovery({ focus });
-
-  /* Score whatever the catalogue now holds, including anything an earlier run
-     left unscored. Runs even when this pass found nothing new — a speaker who
-     just filled in their profile has a backlog of events nobody judged for
-     them yet. */
+  /* ── Scoring: always ──
+     Judges whatever the catalogue holds, including anything earlier passes left
+     unscored. Independent of discovery on purpose: it needs no web search, and
+     a backlog exists whether or not anything new was found today. */
   const scoring = await scoreForAllSpeakers();
 
   return NextResponse.json({
-    ok: result.ok,
-    focus,
-    runId: result.runId,
-    found: result.found,
-    total: result.total,
-    error: result.error,
-    scored: scoring.scored,
-    speakers: scoring.speakers,
-    scoringErrors: scoring.errors.length ? scoring.errors : undefined,
+    ok: !discovery.ran || discovery.ok,
+    discovery,
+    scoring: {
+      speakers: scoring.speakers,
+      scored: scoring.scored,
+      errors: scoring.errors.length ? scoring.errors : undefined,
+    },
   });
 }
 

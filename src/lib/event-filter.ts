@@ -115,7 +115,14 @@ export const PODIUM_STATUSES = ["ACCEPTED", "SPOKEN"] as const;
  * badge forever, and the page it links to is empty.
  */
 export function upcomingOrUndated(now: Date = new Date()): Condition {
-  return { OR: [{ startDate: null }, { startDate: { gte: now } }] };
+  /* Floored to the start of the day, not the current instant. `startDate` is a
+     date, stored at 00:00, so comparing against "now" makes every event
+     happening TODAY read as past — they were scored (scoring floors to
+     midnight) and then hidden from the list, which is how 100 scored events
+     showed up as 92. An event today has not finished. */
+  const from = new Date(now);
+  from.setHours(0, 0, 0, 0);
+  return { OR: [{ startDate: null }, { startDate: { gte: from } }] };
 }
 
 /**
@@ -127,7 +134,8 @@ export function upcomingOrUndated(now: Date = new Date()): Condition {
  *
  *   - podium: no date window, so a gig three days past still counted
  *   - inbox:  counted only existing opportunity rows, so a speaker who has
- *             never been scored saw a full inbox behind a badge of 0
+ *             never been scored saw a full inbox behind a badge of 0, and
+ *             later, no date window once the page dropped past events
  *   - both:   an older privacy rule that hid a speaker's own private events
  *             from their own badge while the page showed them
  *
@@ -139,8 +147,63 @@ export function badgeCountWhere(
   badge: "inbox" | "podium",
   now: Date = new Date(),
 ): Condition {
+  /* Both badges carry the date window, because both pages do. The inbox gained
+     it when past events were dropped from triage; leaving the count behind
+     would put 103 dead rows back in the number above a list that no longer
+     shows them — the same drift this function exists to prevent. */
   if (badge === "inbox") {
-    return { AND: speakerConditions(userId, { status: NO_ROW_STATUS }) };
+    return { AND: [...speakerConditions(userId, { status: NO_ROW_STATUS }), upcomingOrUndated(now)] };
   }
   return { AND: [...speakerConditions(userId, { view: "podium" }), upcomingOrUndated(now)] };
+}
+
+/* ── Inbox ordering ───────────────────────────────────────────────────────
+ * The inbox is a triage queue, and it had neither of the two properties that
+ * makes one useful.
+ *
+ * It sorted by startDate ascending with no lower bound, so it opened on the
+ * oldest events in the catalogue — 103 of them already in the past for the
+ * first speaker who looked. Scoring deliberately skips past events, so the
+ * scored ones began at row 104 and the visible top of the list could never
+ * have a score on it. The page looked unchanged after scoring 100 events.
+ *
+ * And it ordered by date rather than score, so even once the past was gone a
+ * 92 and a 12 sat side by side. Ranking is the entire product of scoring; the
+ * list has to use it or the scores are decoration.
+ */
+
+/** Rows the inbox ranks. Only the two fields the ordering reads. */
+export interface RankableRow {
+  relevancyScore?: number | null;
+  startDate?: Date | string | null;
+}
+
+function time(d: Date | string | null | undefined): number {
+  if (!d) return Number.POSITIVE_INFINITY;           // undated sorts after dated
+  const t = d instanceof Date ? d.getTime() : new Date(d).getTime();
+  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+}
+
+/**
+ * Best opportunities first: score descending, then soonest.
+ *
+ * Unscored rows sort *after* every scored one rather than being treated as
+ * zero. A speaker's backlog is mostly unjudged — 1218 of 1321 for the first
+ * real profile — and mixing those through the ranking by date would bury the
+ * scored ones all over again. They keep their own date order at the bottom,
+ * which is where "not yet judged" belongs in a queue you work top-down.
+ *
+ * A comparator rather than a Prisma `orderBy`: the score lives on the
+ * speaker's EventOpportunity, and ordering a parent by a filtered relation's
+ * column is not something Prisma expresses. The endpoint already materialises
+ * and merges every row, so this costs one sort over data that is in memory.
+ */
+export function byScoreThenDate(a: RankableRow, b: RankableRow): number {
+  const as = a.relevancyScore, bs = b.relevancyScore;
+  const aHas = as != null, bHas = bs != null;
+
+  if (aHas !== bHas) return aHas ? -1 : 1;
+  if (aHas && bHas && as !== bs) return bs! - as!;
+
+  return time(a.startDate) - time(b.startDate);
 }

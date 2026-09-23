@@ -125,8 +125,16 @@ describe("GET /api/events/counts", () => {
     const { AND } = await whereFor("podium");
     const [undated, dated] = AND[AND.length - 1].OR as Record<string, unknown>[];
     expect(undated).toEqual({ startDate: null });
+
+    /* The start of today, not this instant — which is what this test has always
+       been called. startDate is a date stored at 00:00, so a window opening at
+       the current time excludes everything happening TODAY: those events were
+       scored (scoring floors to midnight) and then hidden, which is how 100
+       scored events appeared as 92 in a real inbox. */
     const gte = (dated.startDate as { gte: Date }).gte;
-    expect(Math.abs(gte.getTime() - Date.now())).toBeLessThan(1000);
+    const midnight = new Date();
+    midnight.setHours(0, 0, 0, 0);
+    expect(gte.getTime()).toBe(midnight.getTime());
   });
 
   it("both: hide only what ANOTHER speaker marked private", async () => {

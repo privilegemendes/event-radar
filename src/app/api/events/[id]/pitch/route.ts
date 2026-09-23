@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolveAnthropic, messagesUrl } from "@/lib/anthropic";
 import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { getApplicantProfile } from "@/lib/settings";
 import { speakerName, parseList, parsePronouns } from "@/lib/speaker-brief";
@@ -101,21 +102,15 @@ ${credentials.length ? `4. Reference ${credentials[0]} as a speaking credential 
 Write in the first person as ${name} (${pronouns.subject}/${pronouns.object}). Return ONLY the application text (subject line + body), no preamble.`;
     }
 
-    const baseUrl   = process.env.ANTHROPIC_BASE_URL;
-    const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
+    const anthropic = resolveAnthropic(process.env);
 
-    if (!baseUrl || !authToken) {
+    if (!anthropic) {
       return NextResponse.json({ error: "Anthropic credentials not configured" }, { status: 503 });
     }
 
-    const response = await fetch(`${baseUrl}/v1/messages`, {
+    const response = await fetch(messagesUrl(anthropic), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        Authorization: `Bearer ${authToken}`,
-        "x-api-key": authToken,
-      },
+      headers: anthropic.headers,
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
