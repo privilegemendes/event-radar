@@ -31,7 +31,7 @@ const mockDb = db as unknown as {
 };
 
 /** `known` maps eventId -> the score already on that speaker's row (null = unscored). */
-const catalogue = (known: Record<string, number | null>) => {
+const catalogue = (known: Record<string, number | null | undefined>) => {
   mockDb.event.findMany.mockResolvedValue(
     Object.entries(known).map(([id, relevancyScore]) => ({
       id,
