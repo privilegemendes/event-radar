@@ -16,11 +16,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Vercel deploy state (verified 2026-09-21):** Access Protection is **enabled**
   (`ssoProtection`, production + all previews) — the app has no read-side login of
   its own, so do not disable it without an equivalent gate. The datasource is
-  already hosted **Postgres** on Neon, not SQLite. The GitHub repo and Vercel
-  project moved from a freelancer's personal accounts to `irmakcoderai` on
-  2026-09-23; the README's SMART AI Guidelines name the **coder-internal** org
-  for both, which is still not where this lives. See the **Deployment (Vercel)**
-  section in `README.md`.
+  already hosted **Postgres** on Neon, not SQLite. Still open: the project is on
+  a **personal** GitHub repo and Vercel team, while the README's SMART AI
+  Guidelines say to use the **coder-internal** org for both. See the
+  **Deployment (Vercel)** section in `README.md`.
 - **Auth is Better Auth**, not the old jose JWTs. `src/lib/session.ts` keeps the
   same `getSession` / `requireSession` / `requireAdmin` / `authErrorResponse` API
   that every route already uses, so routes should not talk to Better Auth
@@ -37,10 +36,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   (`npm test`); `src/lib/profile-schema.ts` is deliberately free of
   `server-only` so the settings form and the tests can import it.
 - **Commit as an account authorized on the Vercel team** that owns this
-  project — since the 2026-09-23 handover that is `irmakcoderai`
-  (`275117545+irmakcoderai@users.noreply.github.com`, if GitHub's id-prefixed
-  noreply is in use; confirm with `git log -1 --format='%ae'` on your own first
-  commit rather than trusting this line).
+  project — for THIS repo and Vercel project that is
+  `Privilege Mendes <20317699+privilegemendes@users.noreply.github.com>`.
+  A fork or clone deployed to a different Vercel team needs its own owner's
+  account here instead; confirm with `git log -1 --format='%ae'` on your own
+  first commit rather than trusting this line.
 
   This is load-bearing, not cosmetic: Vercel blocks a Git-triggered deployment
   whose **commit author** is not authorized on the team, and the deployment
