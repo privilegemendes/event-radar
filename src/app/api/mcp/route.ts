@@ -2,6 +2,7 @@ import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { createMcpProtectedRequestHandler } from "@better-auth/mcp";
 import { MCP_RESOURCE } from "@/lib/auth";
 import { registerEventRadarTools } from "@/lib/mcp-tools";
+import { isAdminUser } from "@/lib/user-role";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -48,8 +49,13 @@ const mcpHandler = createMcpHandler(
       throw new Error("MCP request reached the server with no authenticated user");
     }
     const server = new McpServer({ name: "event-radar", version: "0.1.0" });
-    registerEventRadarTools(server, userId);
-    return server;
+    /* The factory may be async, which is what lets the role be read before the
+       tool list is built — a member never sees the shared-catalogue tools at
+       all, rather than seeing them and being refused. */
+    return isAdminUser(userId).then((isAdmin) => {
+      registerEventRadarTools(server, userId, isAdmin);
+      return server;
+    });
   },
   { legacy: "reject" },
 );

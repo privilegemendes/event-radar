@@ -78,7 +78,7 @@ function extractJsonArray(text: string): unknown[] | null {
   return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
 }
 
-type DiscoveredEvent = {
+export type DiscoveredEvent = {
   title: string;
   type: string;
   startDate?: string | null;
@@ -185,14 +185,6 @@ export async function runDiscovery(opts: DiscoveryOptions = {}): Promise<Discove
   const geographyLine  = buildGeographyLine(catalogue);
   const searchPlan     = buildSearchPlan(catalogue, searchYear);
   const lastYear = searchYear + 2;
-
-  /* Privacy is per speaker: each speaker's own keywords decide what is hidden
-     in THEIR view. Kept out of the prompt entirely — it is a local rule, not
-     something the model should be told about or asked to apply. */
-  const speakers = speakerRows.map((row) => ({
-    userId: row.userId,
-    privateKeywords: parseList(row.privateKeywords),
-  }));
 
   let prompt: string;
 
@@ -301,10 +293,6 @@ ${SCHEMA_BLOCK}`;
     }
 
     const events = rawEvents as DiscoveredEvent[];
-    const existing = await db.event.findMany({ select: { title: true, url: true } });
-    const existingTitles = new Set(existing.map((e) => e.title.toLowerCase()));
-    const existingUrls = new Set(existing.filter((e) => e.url).map((e) => e.url!.toLowerCase()));
-
     const sourceNote = partner
       ? `Partner discovery: ${partner.name} — ${today.toDateString()}`
       : broad
@@ -313,81 +301,11 @@ ${SCHEMA_BLOCK}`;
       ? `Focused discovery: ${focus} — ${today.toDateString()}`
       : `Auto-discovery run ${today.toDateString()}`;
 
-    const todayMidnight = new Date(today);
-    todayMidnight.setHours(0, 0, 0, 0);
-
-    const validTypes = ["CONFERENCE", "MEETUP", "EVENT", "PODCAST", "WEBINAR"];
-    const validSignals = ["DEVELOPERS", "ENGINEERS", "CUSTOMERS", "ENTREPRENEURS", "SMBS", "PROFESSIONALS", "WOMEN_IN_TECH", "PARTNERS"];
-    let inserted = 0;
-
-    for (const ev of events) {
-      if (!ev.title || !ev.type || !validTypes.includes(ev.type)) continue;
-      if (existingTitles.has(ev.title.toLowerCase())) continue;
-      if (ev.url && existingUrls.has(ev.url.toLowerCase())) continue;
-      if (ev.startDate && new Date(ev.startDate) < todayMidnight) continue;
-
-      const signals = Array.isArray(ev.audienceSignals)
-        ? ev.audienceSignals.map((s) => String(s).toUpperCase().replace(/[\s-]+/g, "_")).filter((s) => validSignals.includes(s))
-        : [];
-
-      const geo = deriveGeo({ location: ev.location, region: ev.region, title: ev.title, isOnline: ev.isOnline, type: ev.type });
-
-      const created = await db.event.create({
-        data: {
-          title: ev.title,
-          type: ev.type as "CONFERENCE" | "MEETUP" | "EVENT" | "PODCAST" | "WEBINAR",
-          startDate: ev.startDate ? new Date(ev.startDate) : null,
-          location: ev.location ?? null,
-          isOnline: ev.isOnline ?? false,
-          region: geo.macroRegion,
-          city: geo.city,
-          url: ev.url ?? null,
-          cfpDeadline: ev.cfpDeadline ? new Date(ev.cfpDeadline) : null,
-          description: ev.description ?? null,
-          status: "DISCOVERED",
-          sourceNote,
-          ...(partnerId ? { partner: { connect: { id: partnerId } } } : {}),
-          isPaid: ev.isPaid ?? null,
-          paidNote: ev.paidNote ?? null,
-          ticketCost: ev.ticketCost ?? null,
-          audienceDescription: ev.audienceDescription ?? null,
-          audienceSize: ev.audienceSize != null ? Number(ev.audienceSize) : null,
-          otherSpeakers: ev.otherSpeakers ?? null,
-          howToApply: ev.howToApply ?? null,
-          applyUrl: ev.applyUrl ?? null,
-          attendUrl: ev.attendUrl ?? null,
-          socialLinks: ev.socialLinks ? JSON.stringify(ev.socialLinks) : null,
-          industry: ev.industry ?? null,
-          audienceSignals: signals.length ? JSON.stringify([...new Set(signals)]) : null,
-        },
-      });
-
-      /* One UNSCORED opportunity per speaker: the event lands in everyone's
-         inbox, and nobody is handed a judgement made for someone else. The
-         scoring pass fills these in per speaker.
-
-         `private` is set here rather than there because it is deterministic —
-         each speaker's own keywords against the event's text, no model needed
-         and no reason to pay for one. */
-      if (speakers.length) {
-        await db.eventOpportunity.createMany({
-          data: speakers.map((sp) => ({
-            userId: sp.userId,
-            eventId: created.id,
-            status: "DISCOVERED" as const,
-            private: isPrivateEvent(
-              { title: ev.title, description: ev.description, industry: ev.industry, audienceDescription: ev.audienceDescription },
-              sp.privateKeywords,
-            ),
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      existingTitles.add(ev.title.toLowerCase());
-      if (ev.url) existingUrls.add(ev.url.toLowerCase());
-      inserted++;
-    }
+    /* Shared with the client-side path: dedup, geo normalisation, the type and
+       signal validation, and the per-speaker fan-out all live in one place, so
+       a submission from an admin's own search is constrained exactly as the
+       server's own results are. */
+    const { inserted } = await ingestDiscoveredEvents(events, { sourceNote, partnerId });
 
     await db.discoveryRun.update({
       where: { id: run.id },
@@ -415,4 +333,134 @@ export async function rotatingFocus(seed = Date.now()): Promise<string> {
     rows.map((row) => profileFromRow(row as unknown as Record<string, unknown>)),
   );
   return rotatingFocusFrom(buildFocusThemes(catalogue), seed);
+}
+
+
+export interface IngestOptions {
+  /** Where these came from, written onto every row for provenance. */
+  sourceNote: string;
+  partnerId?: string | null;
+}
+
+export interface IngestOutcome {
+  inserted: number;
+  considered: number;
+}
+
+/**
+ * Turn candidate events into catalogue rows.
+ *
+ * The half of discovery that needs no model, and therefore the half both
+ * surfaces share: the server searches with its own credentials and calls this,
+ * and an admin who searched in their own client submits here instead. Finding
+ * is the only step that differs.
+ *
+ * Everything that protects the shared catalogue lives HERE rather than in the
+ * caller, because a submission from a connector is no more trusted than a
+ * model reply: unknown types are dropped, a title or url already present is
+ * skipped, an event that has already happened is skipped, audience signals are
+ * normalised against a fixed list, and free-text region is resolved through
+ * deriveGeo. A caller cannot bypass any of it by sending different JSON.
+ *
+ * Each accepted event fans out to one UNSCORED opportunity per speaker, so it
+ * lands in everyone's inbox with nobody handed a judgement made for someone
+ * else.
+ */
+export async function ingestDiscoveredEvents(
+  candidates: DiscoveredEvent[],
+  opts: IngestOptions,
+): Promise<IngestOutcome> {
+  const { sourceNote, partnerId } = opts;
+  const events = candidates;
+  const today = new Date();
+
+  const speakerRows = await db.speakerProfile.findMany({
+    select: { userId: true, privateKeywords: true },
+  });
+  const speakers = speakerRows.map((row) => ({
+    userId: row.userId,
+    privateKeywords: parseList(row.privateKeywords),
+  }));
+
+  const existing = await db.event.findMany({ select: { title: true, url: true } });
+  const existingTitles = new Set(existing.map((e) => e.title.toLowerCase()));
+  const existingUrls = new Set(existing.filter((e) => e.url).map((e) => e.url!.toLowerCase()));
+
+  const todayMidnight = new Date(today);
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  const validTypes = ["CONFERENCE", "MEETUP", "EVENT", "PODCAST", "WEBINAR"];
+  const validSignals = ["DEVELOPERS", "ENGINEERS", "CUSTOMERS", "ENTREPRENEURS", "SMBS", "PROFESSIONALS", "WOMEN_IN_TECH", "PARTNERS"];
+  let inserted = 0;
+
+  for (const ev of events) {
+    if (!ev.title || !ev.type || !validTypes.includes(ev.type)) continue;
+    if (existingTitles.has(ev.title.toLowerCase())) continue;
+    if (ev.url && existingUrls.has(ev.url.toLowerCase())) continue;
+    if (ev.startDate && new Date(ev.startDate) < todayMidnight) continue;
+
+    const signals = Array.isArray(ev.audienceSignals)
+      ? ev.audienceSignals.map((s) => String(s).toUpperCase().replace(/[\s-]+/g, "_")).filter((s) => validSignals.includes(s))
+      : [];
+
+    const geo = deriveGeo({ location: ev.location, region: ev.region, title: ev.title, isOnline: ev.isOnline, type: ev.type });
+
+    const created = await db.event.create({
+      data: {
+        title: ev.title,
+        type: ev.type as "CONFERENCE" | "MEETUP" | "EVENT" | "PODCAST" | "WEBINAR",
+        startDate: ev.startDate ? new Date(ev.startDate) : null,
+        location: ev.location ?? null,
+        isOnline: ev.isOnline ?? false,
+        region: geo.macroRegion,
+        city: geo.city,
+        url: ev.url ?? null,
+        cfpDeadline: ev.cfpDeadline ? new Date(ev.cfpDeadline) : null,
+        description: ev.description ?? null,
+        status: "DISCOVERED",
+        sourceNote,
+        ...(partnerId ? { partner: { connect: { id: partnerId } } } : {}),
+        isPaid: ev.isPaid ?? null,
+        paidNote: ev.paidNote ?? null,
+        ticketCost: ev.ticketCost ?? null,
+        audienceDescription: ev.audienceDescription ?? null,
+        audienceSize: ev.audienceSize != null ? Number(ev.audienceSize) : null,
+        otherSpeakers: ev.otherSpeakers ?? null,
+        howToApply: ev.howToApply ?? null,
+        applyUrl: ev.applyUrl ?? null,
+        attendUrl: ev.attendUrl ?? null,
+        socialLinks: ev.socialLinks ? JSON.stringify(ev.socialLinks) : null,
+        industry: ev.industry ?? null,
+        audienceSignals: signals.length ? JSON.stringify([...new Set(signals)]) : null,
+      },
+    });
+
+    /* One UNSCORED opportunity per speaker: the event lands in everyone's
+       inbox, and nobody is handed a judgement made for someone else. The
+       scoring pass fills these in per speaker.
+
+       `private` is set here rather than there because it is deterministic —
+       each speaker's own keywords against the event's text, no model needed
+       and no reason to pay for one. */
+    if (speakers.length) {
+      await db.eventOpportunity.createMany({
+        data: speakers.map((sp) => ({
+          userId: sp.userId,
+          eventId: created.id,
+          status: "DISCOVERED" as const,
+          private: isPrivateEvent(
+            { title: ev.title, description: ev.description, industry: ev.industry, audienceDescription: ev.audienceDescription },
+            sp.privateKeywords,
+          ),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    existingTitles.add(ev.title.toLowerCase());
+    if (ev.url) existingUrls.add(ev.url.toLowerCase());
+    inserted++;
+  }
+
+  return { inserted, considered: events.length };
 }
