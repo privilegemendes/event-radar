@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { badgeCountWhere } from "@/lib/event-filter";
+import { isAdminUser } from "@/lib/user-role";
 import { listEventsForSpeaker } from "@/lib/event-list";
+import { updateEventForSpeaker } from "@/lib/event-update";
 import { mergeEventWithOpportunity } from "@/lib/opportunity";
 import { getApplicantProfile } from "@/lib/settings";
 import { scoreForSpeaker, selectUnscoredEvents, buildScoringBrief, applyScores, type ScoreSubmission } from "@/lib/scoring";
@@ -509,6 +511,86 @@ export function registerEventRadarTools(server: Registrable, userId: string, isA
       },
     );
   }
+
+  server.registerTool(
+    "update_event",
+    {
+      title: "Move an event through your pipeline",
+      description:
+        "Update YOUR view of one event: its pipeline status, whether you are attending, and your " +
+        "preparation notes. This is how an event actually moves — searching and scoring only read. " +
+        "Writes your own opportunity row, so it never changes what another speaker sees. " +
+        "As a non-admin, status is limited to DISCOVERED, APPROVED or REJECTED; the later stages " +
+        "and any change to the shared catalogue entry need an admin.",
+      inputSchema: {
+        id: z.string().describe("Event id from search_events"),
+        status: z.enum(["DISCOVERED", "APPROVED", "REJECTED", "PITCHED", "ACCEPTED", "SPOKEN"]).optional()
+          .describe("Your pipeline status for this event"),
+        attending: z.boolean().optional().describe("Whether you are going"),
+        category: z.enum(["ATTEND", "PARTICIPATE", "SPEAK"]).optional().describe("Track. Admin only."),
+        prepStage: z.string().optional().describe("Current preparation stage"),
+        followUpAt: z.string().optional().describe("ISO date to chase this up"),
+      },
+    },
+    async (a: Record<string, never>) => {
+      const { id, ...fields } = a as unknown as { id: string } & Record<string, unknown>;
+      /* Only what the caller actually sent: the operation treats a key's
+         PRESENCE as intent to change it, so passing undefined would clear a
+         field the caller never mentioned. */
+      const body = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
+      if (Object.keys(body).length === 0) {
+        return json({ error: "Nothing to change — pass at least one field." });
+      }
+
+      const isAdmin = await isAdminUser(userId);
+      const result = await updateEventForSpeaker(userId, isAdmin, id, body);
+      if (!result.ok) return json({ error: result.error, status: result.status });
+
+      const e = result.event;
+      return json({
+        id: e.id,
+        title: e.title,
+        status: e.status,
+        attending: e.attending,
+        track: e.category ?? null,
+        prepStage: e.prepStage ?? null,
+        followUpAt: e.followUpAt ?? null,
+        changed: Object.keys(body),
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_speakers",
+    {
+      title: "List tracked speakers",
+      description:
+        "Speakers on the radar as potential contacts, co-panellists or people who have spoken at " +
+        "events you are considering — name, title, company, region and topics. Shared across " +
+        "everyone, not your own list.",
+      inputSchema: {
+        search: z.string().optional().describe("Filter by name, title, company or topics"),
+        limit: z.number().int().min(1).max(200).optional().describe(`Default ${DEFAULT_LIMIT}`),
+      },
+    },
+    async (a: Record<string, never>) => {
+      const { search, limit } = a as unknown as { search?: string; limit?: number };
+      const rows = await db.speaker.findMany({ orderBy: { name: "asc" } });
+      const needle = (search ?? "").toLowerCase();
+      const matched = needle
+        ? rows.filter((sp) => [sp.name, sp.title, sp.company, sp.topics].some((v) => (v ?? "").toLowerCase().includes(needle)))
+        : rows;
+      const shown = matched.slice(0, limit ?? DEFAULT_LIMIT);
+      return json({
+        total: matched.length,
+        showing: shown.length,
+        speakers: shown.map((sp) => ({
+          id: sp.id, name: sp.name, title: sp.title,
+          company: sp.company, region: sp.region, topics: sp.topics,
+        })),
+      });
+    },
+  );
 
   server.registerTool(
     "apply_to_event",
