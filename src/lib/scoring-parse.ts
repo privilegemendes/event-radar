@@ -74,16 +74,25 @@ export function renderEventFacts(e: ScorableEvent, index: number): string {
  * model works from what it is given — a web search here would rebuild the
  * discovery bill once per speaker, which is the exact thing the split exists
  * to stop.
+ *
+ * `geographyLine` is the speaker's priority locations. Discovery has always had
+ * it, to decide where to search; scoring did not, so an event was judged on
+ * topic and format with nothing to say how reachable it was. That put an Austin
+ * meetup at 90 for an Amsterdam-based first-timer whose listed locations were
+ * all European — the model answered correctly, the question was missing a
+ * constraint. It is guidance rather than a cap, so a genuinely exceptional
+ * event somewhere far away can still score well.
  */
 export function buildScoringPrompt(
   speakerBlock: string,
   rubricBlock: string,
   events: ScorableEvent[],
+  geographyLine = "",
 ): string {
   return `${speakerBlock}
 
 ${rubricBlock}
-
+${geographyLine ? `\n${geographyLine}\n` : ""}
 Score each event below FOR THIS SPEAKER, using ONLY the facts given. Do not
 search the web and do not add details from memory — where a fact is missing,
 judge on what is present and say so in the rationale.

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { resolveAnthropic, messagesUrl, WEB_SEARCH_BETA } from "@/lib/anthropic";
 import { deriveGeo } from "@/lib/events";
 import { profileFromRow } from "@/lib/profile-schema";
 import {
@@ -265,24 +266,17 @@ Only include events AFTER ${todayStr} and up to the end of ${lastYear} — activ
 ${SCHEMA_BLOCK}`;
   }
 
-  const baseUrl = process.env.ANTHROPIC_BASE_URL;
-  const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
+  const anthropic = resolveAnthropic(process.env, { beta: WEB_SEARCH_BETA });
 
-  if (!baseUrl || !authToken) {
+  if (!anthropic) {
     await db.discoveryRun.update({ where: { id: run.id }, data: { status: "ERROR", summary: "Anthropic credentials not configured", finishedAt: new Date() } });
     return { ok: false, runId: run.id, error: "Anthropic credentials not configured", status: 503 };
   }
 
   try {
-    const response = await fetch(`${baseUrl}/v1/messages`, {
+    const response = await fetch(messagesUrl(anthropic), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "web-search-2025-03-05",
-        Authorization: `Bearer ${authToken}`,
-        "x-api-key": authToken,
-      },
+      headers: anthropic.headers,
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
         max_tokens: 16000,

@@ -61,6 +61,30 @@ describe("renderEventFacts", () => {
 describe("buildScoringPrompt", () => {
   const prompt = buildScoringPrompt("SPEAKER: Julia", "RUBRIC: 90-100 ...", [ev(), ev({ id: "evt_2", title: "Devcon" })]);
 
+  it("carries the speaker's priority locations when given", () => {
+    // Scoring had no geography at all, while discovery did. An Austin meetup
+    // scored 90 for an Amsterdam-based first-timer whose listed locations were
+    // all European — the model answered correctly, the prompt was missing a
+    // constraint.
+    const withGeo = buildScoringPrompt("S", "R", [ev()], "PRIORITISE events located in: Amsterdam, NL, or ONLINE.");
+    expect(withGeo).toContain("Amsterdam, NL");
+  });
+
+  it("omits the geography section entirely when there is none", () => {
+    // A speaker with no locations set must not get an empty heading the model
+    // then has to interpret.
+    expect(buildScoringPrompt("S", "R", [ev()], "")).not.toContain("PRIORITISE");
+    expect(buildScoringPrompt("S", "R", [ev()])).toBe(buildScoringPrompt("S", "R", [ev()], ""));
+  });
+
+  it("keeps geography as guidance, not a hard filter", () => {
+    // The rubric bands already encode "realistically winnable"; location is
+    // evidence for that judgement rather than a veto, so a genuinely
+    // exceptional far-away event can still score well.
+    const withGeo = buildScoringPrompt("S", "R", [ev()], "PRIORITISE events located in: Amsterdam, NL.");
+    expect(withGeo).not.toMatch(/cap .* at \d+|maximum score|never score above/i);
+  });
+
   it("carries the speaker's own brief and rubric", () => {
     expect(prompt).toContain("SPEAKER: Julia");
     expect(prompt).toContain("RUBRIC: 90-100");

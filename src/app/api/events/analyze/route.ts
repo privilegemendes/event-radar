@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolveAnthropic, messagesUrl, WEB_SEARCH_BETA } from "@/lib/anthropic";
 import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { getApplicantProfile } from "@/lib/settings";
 import { buildSpeakerProfile, buildScoringRubric } from "@/lib/speaker-brief";
@@ -48,10 +49,8 @@ export async function POST() {
     if (events.length === 0)
       return NextResponse.json({ ok: true, analyzed: 0, message: "All events already have scores and links" });
 
-    const baseUrl   = process.env.ANTHROPIC_BASE_URL;
-    const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
-
-    if (!baseUrl || !authToken)
+    const anthropic = resolveAnthropic(process.env, { beta: WEB_SEARCH_BETA });
+    if (!anthropic)
       return NextResponse.json({ error: "Anthropic credentials not configured" }, { status: 503 });
 
     /* This speaker's brief: the upsert below writes session.userId's own
@@ -113,15 +112,9 @@ Return ONLY a JSON array of exactly ${events.length} objects IN THE SAME ORDER a
 
 CRITICAL: Only include URLs you actually found via web search. Return null for any URL you are not certain about.`;
 
-    const response = await fetch(`${baseUrl}/v1/messages`, {
+    const response = await fetch(messagesUrl(anthropic), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "web-search-2025-03-05",
-        Authorization: `Bearer ${authToken}`,
-        "x-api-key": authToken,
-      },
+      headers: anthropic.headers,
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
         max_tokens: 6000,

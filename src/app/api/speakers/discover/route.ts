@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolveAnthropic, messagesUrl } from "@/lib/anthropic";
 import { requireAdmin, authErrorResponse } from "@/lib/session";
 import { capNote } from "@/lib/text";
 import { getApplicantProfile } from "@/lib/settings";
@@ -79,9 +80,8 @@ export async function POST(request: NextRequest) {
     if (events.length === 0)
       return NextResponse.json({ ok: true, found: 0, message: "No upcoming events to mine for speakers" });
 
-    const baseUrl = process.env.ANTHROPIC_BASE_URL;
-    const authToken = process.env.ANTHROPIC_AUTH_TOKEN;
-    if (!baseUrl || !authToken)
+    const anthropic = resolveAnthropic(process.env);
+    if (!anthropic)
       return NextResponse.json({ error: "Anthropic credentials not configured" }, { status: 503 });
 
     const eventList = events.map((e, i) =>
@@ -122,15 +122,9 @@ Return ONLY a flat JSON array (no markdown, no prose). One object per speaker (a
 }]
 Only include real people you found via search. Do not invent names or LinkedIn URLs.`;
 
-    const response = await fetch(`${baseUrl}/v1/messages`, {
+    const response = await fetch(messagesUrl(anthropic), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "web-search-2025-03-05",
-        Authorization: `Bearer ${authToken}`,
-        "x-api-key": authToken,
-      },
+      headers: anthropic.headers,
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
         max_tokens: 16000,
