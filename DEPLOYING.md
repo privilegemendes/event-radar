@@ -1,32 +1,55 @@
-# Handover — 2026-09-23
+# Deploying your own copy
 
-The GitHub repo and Vercel project moved from a freelancer's personal accounts
-to **`irmakcoderai`**. The app's own owner is unchanged: `OWNER_EMAIL` is still
-`irmak@coder.com`, which is the account that sees the Podium and private events.
+Cloning this repo and deploying it to your own Vercel gives you a working app
+with an EMPTY catalogue: `prisma db seed` creates the three accounts and the
+partner list, and no events. Events arrive through discovery, or by copying data
+from an existing instance — see **Bringing data with you** at the end, which is
+a privacy decision as much as a technical one.
 
 This file is the things that are not obvious from the code, ordered by what will
-bite first.
+bite first. `README.md` has the full environment-variable table.
 
 ---
 
-## 1. Rotate these
+## 0. What a new deployment needs
 
-| Secret | Why |
+| | |
 |---|---|
-| `ANTHROPIC_AUTH_TOKEN` | **Was exposed in a working session's terminal output.** Rotate regardless of the handover. |
-| `BETTER_AUTH_SECRET` | The previous owner has seen it. Rotating signs everyone out and invalidates every issued OAuth token, including MCP connectors — expect to reconnect them. |
-| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | Neon credentials. Reissue with the project. |
+| **Database** | Your own Neon (or any Postgres). `DATABASE_URL` pooled, `DATABASE_URL_UNPOOLED` direct. |
+| **`BETTER_AUTH_SECRET`** | 32+ characters, yours alone. Never reuse another instance's. |
+| **`BETTER_AUTH_URL`** | Your public URL — see §3, it is load-bearing for MCP. |
+| **`OWNER_EMAIL`** | Whoever should see the Podium and private events. Defaults to `irmak@coder.com`. |
+| **`ANTHROPIC_API_KEY`** | Only if you want the cron and the web app's AI buttons. MCP tools can run on the caller's own model instead — see §6. |
+| **`CRON_SECRET`** | Locks the cron endpoint in production. |
 
-Also: the seeded admin accounts (`irmak@coder.com`, `assistant@example.com`)
-were last reported still on the default password `change-me-now`. The app shows
-a banner until it is changed.
+Migrations run automatically in the production build. **Seeding does not** —
+run `npx prisma db seed` once against the new database, then change the default
+passwords immediately.
+
+
+---
+
+## 1. Secrets
+
+**Generate your own; never copy another instance's.** `BETTER_AUTH_SECRET`
+signs sessions and OAuth tokens, so a shared one means two deployments can mint
+credentials for each other.
+
+The seed creates `irmak@coder.com` and `assistant@example.com` as ADMIN and
+`viewer@coder.com` as MEMBER, all on the default password. **Change them on
+first sign-in** — the app shows a banner until you do, and a public URL with a
+known default password is an open door.
 
 ## 2. Deployments can fail with no error at all
 
 Vercel blocks a Git-triggered deployment whose **commit author** is not
 authorized on the team. It never builds — no logs, just `BLOCKED`, surfacing on
-the PR as "Deployment was blocked". See `AGENTS.md`; the rule is "whoever owns
-the Vercel team", and that entry has been wrong twice now.
+the PR as "Deployment was blocked".
+
+On a clone this is the first thing to get right: `AGENTS.md` names the account
+for the ORIGINAL repo, so change it to yours, or an agent reading it will
+author commits that your Vercel team does not recognise. The rule is "whoever
+owns the Vercel team" — the name in that file has been wrong before.
 
 ## 3. `BETTER_AUTH_URL` pins the MCP resource identifier
 
@@ -110,13 +133,37 @@ for the web app's own AI buttons.
 **A connector caches its tool list when it connects.** After shipping a new
 tool, reconnect it or the old list persists.
 
-## 7. Known gaps
+## 7. Bringing data with you
 
-- `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` are unset in production, so the
-  weekly cron does nothing and the web app's AI buttons fail. Optional if
-  everyone uses MCP; required otherwise.
-- The app's `EventOpportunity` rows are sparse — production had none at the time
-  of writing, so most events read as unscored. `scripts/backfill-event-opportunities.ts`
-  and the scoring tools fill them.
-- `README.md` still names the **coder-internal** org for GitHub and Vercel,
-  which is not where this lives.
+A fresh deployment has no events. Two ways forward, and the choice is not
+purely technical.
+
+**Start empty.** Run discovery and it repopulates over time — that is what it
+is for. The catalogue rebuilds from scratch, scored for whoever is using it.
+Nothing personal moves between instances. This is the default and the one to
+prefer unless there is a reason not to.
+
+**Copy from an existing instance.** `scripts/copy-prod-to-local.ts` does a
+Prisma-level copy that preserves ids, relations and types (`pg_dump` stalls
+against Neon, and a URL on the command line puts the password in the process
+list). Its destination guard refuses anything that is not localhost, so copying
+*into* a second hosted database means adapting it deliberately rather than
+pointing it somewhere new.
+
+**Before copying, know what is in it.** That data is not just event listings:
+
+- **Speaker records** — real people's names, employers, titles, and AI-written
+  outreach notes *about* them
+- **The partner CRM** — named contacts and deal stages
+- **`User` and `account` rows** — including password hashes
+- **`AppSetting`** — holds `WORK_CALENDAR_ICS_URL`, which grants read access to
+  a real calendar
+- **`SpeakerProfile`** — personal contact details, private keywords
+
+Moving that to a different owner's database is a data-protection decision, not
+a migration step. If you copy, copy the `Event` and `Partner` tables and leave
+`User`, `account`, `SpeakerProfile` and `AppSetting` behind — the new instance
+seeds its own accounts and each speaker fills in their own profile.
+
+Delete any local production copy when you are finished with it.
+
