@@ -257,4 +257,130 @@ server.registerTool(
   },
 );
 
+/* ── Apply helper ─────────────────────────────────────────────────────────
+ * This tool does NOT submit anything, and it does not drive a browser — an
+ * MCP server is a stdio subprocess with no browser of its own, and the
+ * client's browser is the one a human can watch and take over, which is the
+ * whole point on an action that ends in a real submission.
+ *
+ * What it does is collapse the four steps before that into one call: resolve
+ * which URL actually takes an application, fetch the applicant profile, derive
+ * the fields application forms ask for but the profile does not store
+ * (first/last name, city), and say plainly which fields are missing.
+ *
+ * IDENTITY: /api/settings/profile returns the CALLER'S OWN row — "a speaker's
+ * profile is their own, not the owner's". There is deliberately no way to
+ * apply on someone else's behalf, matching /api/events/score, which takes no
+ * userId for the same reason. So this applies as whoever the server signed in
+ * as, and it says who that is in every reply, so a demo cannot silently apply
+ * with the wrong person's details.
+ */
+
+/** Application forms almost always want these separately; the profile stores
+ *  one `fullName`. Last token is the surname, the rest the given name(s) —
+ *  wrong for some naming conventions, so both the split AND the original are
+ *  returned and the caller can prefer fullName where a form takes one field. */
+function splitName(fullName) {
+  const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return { firstName: parts[0] ?? "", lastName: "" };
+  return { firstName: parts.slice(0, -1).join(" "), lastName: parts.at(-1) };
+}
+
+/** "Amsterdam, NL" → "Amsterdam". Forms ask for a city; the profile stores a
+ *  free-text location that usually carries a country too. */
+function cityFrom(location) {
+  return (location ?? "").split(",")[0].trim();
+}
+
+/** Common name/id/label fragments per profile field, so the caller can match a
+ *  form's inputs without a round-trip of guesses. */
+const FIELD_HINTS = {
+  email:      ["email", "e-mail", "mail"],
+  firstName:  ["firstname", "first_name", "given", "fname"],
+  lastName:   ["lastname", "last_name", "surname", "family", "lname"],
+  fullName:   ["fullname", "full_name", "name"],
+  jobTitle:   ["jobtitle", "job_title", "title", "role", "position"],
+  company:    ["company", "organization", "organisation", "employer"],
+  city:       ["city", "town", "locality"],
+  location:   ["location", "country", "region"],
+  phone:      ["phone", "tel", "mobile"],
+  linkedin:   ["linkedin", "linked_in", "profile_url"],
+  twitter:    ["twitter", "x_handle"],
+  website:    ["website", "url", "homepage", "blog"],
+  headshotUrl:["headshot", "photo", "picture", "avatar"],
+  bioShort:   ["bio", "biography", "about", "short_bio"],
+  bioLong:    ["long_bio", "detailed_bio"],
+  talkTopics: ["topics", "talk", "abstract", "session"],
+  dietary:    ["dietary", "accessibility", "access", "allergy"],
+  pronouns:   ["pronouns"],
+};
+
+server.registerTool(
+  "apply_to_event",
+  {
+    title: "Prepare an application for an event",
+    description:
+      "Gather everything needed to apply or register for one event: the URL that actually " +
+      "takes an application, the signed-in speaker's applicant details mapped to the fields " +
+      "forms ask for, and which details are missing. Applies AS THE SIGNED-IN SPEAKER — " +
+      "there is no way to apply on someone else's behalf. " +
+      "This tool NEVER submits and never opens a browser: open `target.url` yourself, fill " +
+      "from `applicant` using `fieldHints` to match inputs, then STOP and let the person " +
+      "review and press submit. Check `missing` first — a form may require something the " +
+      "profile does not have.",
+    inputSchema: { id: z.string().describe("Event id from search_events") },
+  },
+  async ({ id }) => {
+    try {
+      const [{ data: event }, { data: profile }] = await Promise.all([
+        client.json(`/api/events/${encodeURIComponent(id)}`),
+        client.json("/api/settings/profile"),
+      ]);
+
+      /* An application URL beats a ticket URL beats the event's homepage. The
+         first two are often absent — howToApply is then the only instruction
+         there is, so it is always returned rather than only as a fallback. */
+      const target = [
+        ["applyUrl", event.applyUrl],
+        ["attendUrl", event.attendUrl],
+        ["url", event.url],
+      ].find(([, v]) => typeof v === "string" && /^https?:\/\//i.test(v));
+
+      const { firstName, lastName } = splitName(profile.fullName);
+      const applicant = {
+        fullName: profile.fullName, firstName, lastName,
+        email: profile.email, phone: profile.phone,
+        jobTitle: profile.jobTitle, company: profile.company,
+        city: cityFrom(profile.location), location: profile.location,
+        pronouns: profile.pronouns, linkedin: profile.linkedin,
+        twitter: profile.twitter, website: profile.website,
+        headshotUrl: profile.headshotUrl,
+        bioShort: profile.bioShort, bioLong: profile.bioLong,
+        talkTopics: profile.talkTopics, dietary: profile.dietary,
+      };
+
+      const missing = Object.entries(applicant)
+        .filter(([, v]) => !String(v ?? "").trim())
+        .map(([k]) => k);
+
+      return json({
+        applyingAs: { name: profile.fullName || "(profile has no name)", email: profile.email || null },
+        event: {
+          id: event.id, title: event.title, type: event.type,
+          startDate: event.startDate, location: event.location,
+          isOnline: event.isOnline, ticketCost: event.ticketCost ?? null,
+          howToApply: event.howToApply ?? null,
+        },
+        target: target ? { url: target[1], source: target[0] } : null,
+        applicant,
+        missing,
+        fieldHints: FIELD_HINTS,
+        next: target
+          ? "Open target.url, match the form's inputs using fieldHints, fill from applicant, then STOP — do not submit. Let the person review and send it themselves."
+          : "No application URL on this event. Read event.howToApply and ask the person how they want to proceed.",
+      });
+    } catch (e) { return fail(e); }
+  },
+);
+
 await server.connect(new StdioServerTransport());

@@ -36,7 +36,7 @@ const call = (n, a = {}) => client.callTool({ name: n, arguments: a });
 
 console.log("1. Handshake");
 const { tools } = await client.listTools();
-const EXPECTED = ["search_events", "get_event", "get_pipeline_summary", "list_partners", "list_speakers", "score_my_inbox"];
+const EXPECTED = ["search_events", "get_event", "get_pipeline_summary", "list_partners", "list_speakers", "score_my_inbox", "apply_to_event"];
 const names = tools.map((t) => t.name).sort();
 check("server advertises the expected tools", JSON.stringify(names) === JSON.stringify([...EXPECTED].sort()), names.join(", "));
 check("every tool has a description", tools.every((t) => t.description?.length > 40));
@@ -89,7 +89,22 @@ check("territory filter applies (incl. multi-value rows)",
 const speakers = parse(await call("list_speakers"));
 check("speakers bounded by default", speakers.showing <= 25, `${speakers.showing} of ${speakers.total}`);
 
-console.log("\n7. Error handling");
+console.log("\n7. apply_to_event");
+const ap = parse(await call("apply_to_event", { id: d.events[0].id }));
+check("names the identity it would apply as", typeof ap.applyingAs?.name === "string", ap.applyingAs?.name);
+check("resolves an application target", ap.target === null || /^https?:\/\//.test(ap.target.url),
+  ap.target ? `${ap.target.source} → ${ap.target.url.slice(0, 44)}` : "none (howToApply only)");
+check("splits fullName into first/last",
+  !ap.applicant.fullName || (ap.applicant.firstName && ap.applicant.lastName),
+  `${ap.applicant.firstName} | ${ap.applicant.lastName}`);
+check("derives city from location",
+  !ap.applicant.location || ap.applicant.city === ap.applicant.location.split(",")[0].trim(),
+  `${ap.applicant.location} → ${ap.applicant.city}`);
+check("reports missing fields accurately",
+  ap.missing.every((k) => !String(ap.applicant[k] ?? "").trim()), `${ap.missing.length} missing`);
+check("never implies it submits", /do not submit|STOP/i.test(ap.next), ap.next.slice(0, 46) + "…");
+
+console.log("\n8. Error handling");
 const bad = await call("get_event", { id: "does-not-exist" });
 check("unknown id is a clean tool error, not a crash", bad.isError === true, bad.content[0].text.slice(0, 60));
 
