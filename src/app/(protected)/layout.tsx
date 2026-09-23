@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
+import { TrackLastList } from "@/components/BackLink";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   /* Reads require a session. Middleware redirects on a missing cookie, but that
@@ -13,6 +14,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen overflow-hidden bg-coder-bg">
+      {/* Records the last list page so a detail page's Back can return to it. */}
+      <TrackLastList />
       <Sidebar role={role} />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <TopBar

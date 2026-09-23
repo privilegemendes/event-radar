@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import BackLink from "@/components/BackLink";
 import {
   EVENT_TYPE_STYLES, STATUS_STYLES, STATUS_ORDER,
   EVENT_TYPES, EVENT_STATUSES, REGIONS, LIKELIHOOD_STYLES,
@@ -257,7 +258,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Back + Delete */}
         <div className="flex items-center justify-between mb-4">
-          <Link href="/" className="font-mono text-[10px] uppercase tracking-[0.08em] text-white/30 hover:text-coder-purple transition-colors">← Back</Link>
+          <BackLink />
           {isAdmin && (
             <button onClick={deleteEvent} className="font-mono text-[9px] uppercase tracking-[0.08em] text-coder-coral/50 hover:text-coder-coral transition-colors">Delete</button>
           )}
