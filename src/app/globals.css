@@ -1,58 +1,172 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
-/* ── Coder brand tokens ── */
+/**
+ * Two themes, one token set.
+ *
+ * `:root` carries light, `.dark` carries dark, matching the shape shadcn/ui
+ * expects. `<html>` ships with `class="dark"`, so the app looks exactly as it
+ * did; turning light mode on later is a matter of removing that class rather
+ * than another pass over the components.
+ *
+ * Accent values are not the dark ones lightened. The dark palette is neon on
+ * near-black — #66FFAB is 1.3:1 on white — so each light value was derived by
+ * holding the hue in OKLCH and darkening until the pattern the app actually
+ * renders, `bg-X/15` behind `text-X`, clears WCAG AA at 4.6:1. That is the
+ * strictest of the three surfaces a signal colour lands on; targeting plain
+ * white instead leaves the badges at 3.9:1.
+ *
+ * Green, cyan and amber move 7–9° round the wheel on the way: there is no
+ * legible light-mode mint, so light green reads as forest rather than neon.
+ */
+
 :root {
-  /* Surfaces: the page, raised containers, and form controls. */
-  --coder-bg:             #090B0B;
-  --coder-control:        #0D1011;
-  --coder-panel:          #101314;
-  --coder-panel-alt:      #141718;
-  --coder-border:         rgba(255,255,255,0.08);
+  color-scheme: light;
 
-  /* Accents. */
-  --coder-purple:         #BC7CFF;
-  --coder-purple-hover:   #CA96FF;
-  --coder-purple-active:  #B070F0;
-  --coder-green:          #66FFAB;
-  --coder-green-hover:    #85FFBE;
-  --coder-cyan:           #01F2FF;
-  --coder-coral:          #FF8067;
-  --coder-pink:           #F08DFF;
-  --coder-amber:          #FFC46B;
-  --coder-red:            #FF6B6B;
+  /* ── Surfaces. The ramp inverts between themes rather than mirroring: dark
+     raises by getting lighter, light raises by getting whiter over a grey
+     page. A control stays recessed relative to its card in both. ── */
+  --background:           #F7F8F8;
+  --foreground:           #0B0D0E;
+  --card:                 #FFFFFF;
+  --card-foreground:      #0B0D0E;
+  --popover:              #FFFFFF;
+  --popover-foreground:   #0B0D0E;
+  --muted:                #ECEEEE;
+  --muted-foreground:     #707070;
+  --accent:               #ECEEEE;
+  --accent-foreground:    #0B0D0E;
+  --secondary:            #ECEEEE;
+  --secondary-foreground: #0B0D0E;
+  --input:                #F1F2F3;
+  --border:               rgba(0,0,0,0.10);
+  --ring:                 #8943C9;
 
-  /* Third-party brand colors. Not ours — matched to the service so the
-     affordance is recognisable. */
+  --primary:              #8943C9;
+  --primary-hover:        #7A32B8;
+  --primary-active:       #6F23AB;
+  --primary-foreground:   #FFFFFF;
+
+  /* `destructive` is coral, which shipped with the design and already carries
+     REJECTED and warnings. Red is kept for the one delete affordance. */
+  --destructive:          #B83922;
+  --destructive-foreground: #FFFFFF;
+
+  /* ── Signal colours. These encode status, type, track and likelihood, and
+     have no shadcn equivalent, so they live alongside its set. ── */
+  --signal-purple:        #8943C9;
+  --signal-green:         #007729;
+  --signal-green-hover:   #006819;
+  --signal-cyan:          #007280;
+  --signal-coral:         #B83922;
+  --signal-pink:          #9F39AF;
+  --signal-amber:         #925A00;
+  --signal-red:           #C22734;
+
+  /* Third-party brand colours. Not ours — matched to the service so the
+     affordance is recognisable, and identical in both themes. */
   --brand-linkedin:       #0A66C2;
   --brand-linkedin-fg:    #4DA3F0;
 }
 
-/* Expose every brand color as a Tailwind utility: bg-coder-panel,
-   text-coder-purple, border-coder-purple/30, ring-coder-cyan, and so on.
-   Components should reference these rather than repeating the hex. */
+.dark {
+  color-scheme: dark;
+
+  --background:           #090B0B;
+  --foreground:           #FFFFFF;
+  --card:                 #101314;
+  --card-foreground:      #FFFFFF;
+  --popover:              #101314;
+  --popover-foreground:   #FFFFFF;
+  --muted:                #141718;
+  --muted-foreground:     #7F7F7F;
+  --accent:               #141718;
+  --accent-foreground:    #FFFFFF;
+  --secondary:            #141718;
+  --secondary-foreground: #FFFFFF;
+  --input:                #0D1011;
+  --border:               rgba(255,255,255,0.08);
+  --ring:                 #BC7CFF;
+
+  --primary:              #BC7CFF;
+  --primary-hover:        #CA96FF;
+  --primary-active:       #B070F0;
+  --primary-foreground:   #0B0D0E;
+
+  --destructive:          #FF8067;
+  --destructive-foreground: #0B0D0E;
+
+  --signal-purple:        #BC7CFF;
+  --signal-green:         #66FFAB;
+  --signal-green-hover:   #85FFBE;
+  --signal-cyan:          #01F2FF;
+  --signal-coral:         #FF8067;
+  --signal-pink:          #F08DFF;
+  --signal-amber:         #FFC46B;
+  --signal-red:           #FF6B6B;
+}
+
+/**
+ * Utilities. The `coder-*` names are retained as aliases onto the same
+ * variables so the ~520 call sites that use them keep working and pick up both
+ * themes for free; they are migrated to the semantic names in a later pass,
+ * and nothing new should reach for them.
+ */
 @theme inline {
   --font-sans:                  var(--font-geist-sans);
   --font-mono:                  var(--font-geist-mono);
 
-  --color-coder-bg:             var(--coder-bg);
-  --color-coder-control:        var(--coder-control);
-  --color-coder-panel:          var(--coder-panel);
-  --color-coder-panel-alt:      var(--coder-panel-alt);
-  --color-coder-border:         var(--coder-border);
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-input:                var(--input);
+  --color-border:               var(--border);
+  --color-ring:                 var(--ring);
 
-  --color-coder-purple:         var(--coder-purple);
-  --color-coder-purple-hover:   var(--coder-purple-hover);
-  --color-coder-purple-active:  var(--coder-purple-active);
-  --color-coder-green:          var(--coder-green);
-  --color-coder-green-hover:    var(--coder-green-hover);
-  --color-coder-cyan:           var(--coder-cyan);
-  --color-coder-coral:          var(--coder-coral);
-  --color-coder-pink:           var(--coder-pink);
-  --color-coder-amber:          var(--coder-amber);
-  --color-coder-red:            var(--coder-red);
+  --color-primary:              var(--primary);
+  --color-primary-hover:        var(--primary-hover);
+  --color-primary-active:       var(--primary-active);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-destructive:          var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-signal-purple:        var(--signal-purple);
+  --color-signal-green:         var(--signal-green);
+  --color-signal-green-hover:   var(--signal-green-hover);
+  --color-signal-cyan:          var(--signal-cyan);
+  --color-signal-coral:         var(--signal-coral);
+  --color-signal-pink:          var(--signal-pink);
+  --color-signal-amber:         var(--signal-amber);
+  --color-signal-red:           var(--signal-red);
 
   --color-brand-linkedin:       var(--brand-linkedin);
   --color-brand-linkedin-fg:    var(--brand-linkedin-fg);
+
+  /* Deprecated aliases — see the note above. */
+  --color-coder-bg:             var(--background);
+  --color-coder-control:        var(--input);
+  --color-coder-panel:          var(--card);
+  --color-coder-panel-alt:      var(--muted);
+  --color-coder-border:         var(--border);
+  --color-coder-purple:         var(--signal-purple);
+  --color-coder-purple-hover:   var(--primary-hover);
+  --color-coder-purple-active:  var(--primary-active);
+  --color-coder-green:          var(--signal-green);
+  --color-coder-green-hover:    var(--signal-green-hover);
+  --color-coder-cyan:           var(--signal-cyan);
+  --color-coder-coral:          var(--signal-coral);
+  --color-coder-pink:           var(--signal-pink);
+  --color-coder-amber:          var(--signal-amber);
+  --color-coder-red:            var(--signal-red);
 }
 
 /* ── Reset & base ── */
@@ -60,21 +174,17 @@
   box-sizing: border-box;
 }
 
-html {
-  color-scheme: dark;
-}
-
 html, body {
-  background: var(--coder-bg);
-  color: #ffffff;
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Native select / input dark override ── */
+/* Native controls follow whichever theme is active. */
 input, select, textarea {
-  color-scheme: dark;
+  color-scheme: inherit;
 }
 
 /* ── Scrollbar ── */
@@ -83,18 +193,18 @@ input, select, textarea {
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--coder-bg);
+  background: var(--background);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.12);
+  background: color-mix(in oklab, var(--foreground) 14%, transparent);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(188,124,255,0.4);
+  background: color-mix(in oklab, var(--ring) 40%, transparent);
 }
 
 /* ── Focus visible ring ── */
 :focus-visible {
-  outline: 2px solid var(--coder-purple);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
